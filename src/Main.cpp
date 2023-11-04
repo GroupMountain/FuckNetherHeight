@@ -10,7 +10,7 @@
 #include <mc/Player.hpp>
 #include <mc/UserEntityIdentifierComponent.hpp>
 #include <mc/Level.hpp>
-#include <EventAPI.h>
+#include <mc/StartGamePacket.hpp>
 
 extern Logger logger;
 
@@ -56,18 +56,10 @@ TClasslessInstanceHook(bool, "?isClientSideGenEnabled@PropertiesSettings@@QEBA_N
 	return false;
 }
 
-
-
-/*
-TClasslessInstanceHook(void, "?sendToClient@LoopbackPacketSender@@UEAAXPEBVUserEntityIdentifierComponent@@AEBVPacket@@@Z", UserEntityIdentifierComponent* a1, Packet* a2) {
-    if (a2->getId() == MinecraftPacketIds::ChangeDimension) {
-        auto pkt = (ChangeDimensionPacket*)a2;
-        auto pl = Global<Level>->getPlayer(a1->mUUID);
-        if (pkt->mToDimensionId == 1) {
-            pkt->mToDimensionId = 2;
-        }
-        return original(this, a1, pkt);
-    } 
-	return original(this, a1, a2);
+// 修正进服客户端维度
+TInstanceHook(void, "?write@StartGamePacket@@UEBAXAEAVBinaryStream@@@Z", StartGamePacket, void* a1) {
+    if (this->mSettings.mSpawnSettings.dimension == 1) {
+        this->mSettings.mSpawnSettings.dimension = 2;
+    }
+	return original(this, a1);
 }
-*/
