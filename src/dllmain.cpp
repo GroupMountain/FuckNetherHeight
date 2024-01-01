@@ -1,40 +1,32 @@
-#include <LoggerAPI.h>
-#include <ServerAPI.h>
-#include "version.h"
+#include <memory>
 
-void PluginInit();
+#include <ll/api/plugin/NativePlugin.h>
 
-Logger logger(PLUGIN_NAME);
+#include "Plugin.h"
 
-BOOL APIENTRY DllMain(HMODULE hModule,
-                      DWORD ul_reason_for_call,
-                      LPVOID lpReserved)
-{
-    switch (ul_reason_for_call)
-    {
-    case DLL_PROCESS_ATTACH:
-        ll::registerPlugin(
-            PLUGIN_NAME,
-            PLUGIN_INTRODUCTION,
-            ll::Version(PLUGIN_VERSION_MAJOR, PLUGIN_VERSION_MINOR, PLUGIN_VERSION_REVISION, PLUGIN_LLVERSION_STATUS),
-            std::map<std::string, std::string>{
-                {"Author", PLUGIN_AUTHOR},
-            });
-        break;
+namespace plugin {
 
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
-        break;
-    }
-    return TRUE;
+// The global plugin instance.
+std::unique_ptr<Plugin> plugin = nullptr;
+
+extern "C" {
+_declspec(dllexport) bool ll_plugin_load(ll::plugin::NativePlugin& self) {
+    plugin = std::make_unique<plugin::Plugin>(self);
+
+    return true;
 }
 
-extern "C"
-{
-    _declspec(dllexport) void onPostInit()
-    {
-        std::ios::sync_with_stdio(false);
-        PluginInit();
-    }
+/// @warning Unloading the plugin may cause a crash if the plugin has not released all of its
+/// resources. If you are unsure, keep this function commented out.
+// _declspec(dllexport) bool ll_plugin_unload(ll::plugin::Plugin&) {
+//     plugin.reset();
+//
+//     return true;
+// }
+
+_declspec(dllexport) bool ll_plugin_enable(ll::plugin::NativePlugin&) { return plugin->enable(); }
+
+_declspec(dllexport) bool ll_plugin_disable(ll::plugin::NativePlugin&) { return plugin->disable(); }
 }
+
+} // namespace plugin
