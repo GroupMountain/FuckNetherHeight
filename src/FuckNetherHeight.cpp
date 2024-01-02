@@ -18,7 +18,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     NetworkIdentifier const& id,
     SubChunkRequestPacket&   pkt
 ) {
-    auto pl = this->getServerPlayer(id, pkt.mClientSubId);
+    auto pl            = this->getServerPlayer(id, pkt.mClientSubId);
     pkt.mDimensionType = pl.value().getDimensionId();
     return origin(id, pkt);
 }
