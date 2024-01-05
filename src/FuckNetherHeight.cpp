@@ -5,7 +5,7 @@ void PatchNetherHeight() {
     uintptr_t regionStart =
         (uintptr_t)ll::memory::resolveSymbol("??0NetherDimension@@QEAA@AEAVILevel@@AEAVScheduler@@@Z");
     std::vector<uint16_t> pattern = TCHelper::splitHex("41 B9 00 00 80 00");
-    uintptr_t             address = ModUtils::SigScan(pattern, regionStart, 114514);
+    uintptr_t             address = ModUtils::SigScan(pattern, regionStart, 0x300);
     ModUtils::Replace(address, TCHelper::splitHex("41 B9 00 00 80 00"), TCHelper::splitHex8("41 B9 00 00 00 01"));
 }
 
