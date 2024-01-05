@@ -1,5 +1,7 @@
 #include "Global.h"
 
+ll::Logger logger("FuckNetherHeight");
+
 namespace plugin {
 
 Plugin::Plugin(ll::plugin::NativePlugin& self) : mSelf(self) {
@@ -8,7 +10,6 @@ Plugin::Plugin(ll::plugin::NativePlugin& self) : mSelf(self) {
 }
 
 bool Plugin::enable() {
-    auto& logger = mSelf.getLogger();
     logger.info("FuckNetherHeight Loaded!");
     logger.info("Author: Tsubasa6848");
     logger.info("Repository: https://github.com/GroupMountain/FuckNetherHeight");
@@ -16,7 +17,6 @@ bool Plugin::enable() {
 }
 
 bool Plugin::disable() {
-    auto& logger = mSelf.getLogger();
     logger.info("FuckNetherHeight Disabled!");
     return true;
 }

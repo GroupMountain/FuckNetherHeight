@@ -1,6 +1,6 @@
 #pragma once
-
 #include "Global.h"
+#include <ll/api/plugin/NativePlugin.h>
 
 namespace plugin {
 

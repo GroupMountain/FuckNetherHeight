@@ -74,3 +74,73 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
 ) {
     return false;
 }
+
+LL_AUTO_TYPED_INSTANCE_HOOK(
+    AddVolumeEntityPacketHook,
+    ll::memory::HookPriority::Lowest,
+    AddVolumeEntityPacket,
+    "?write@AddVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z",
+    void,
+    BinaryStream const& bs
+) {
+    if (this->mDimensionType == 1) {
+        this->mDimensionType = 2;
+    }
+    return origin(bs);
+}
+
+LL_AUTO_TYPED_INSTANCE_HOOK(
+    ClientboundMapItemDataPacketHook,
+    ll::memory::HookPriority::Lowest,
+    ClientboundMapItemDataPacket,
+    "?write@ClientboundMapItemDataPacket@@UEBAXAEAVBinaryStream@@@Z",
+    void,
+    BinaryStream const& bs
+) {
+    if (this->mDimension == 1) {
+        this->mDimension = 2;
+    }
+    return origin(bs);
+}
+
+LL_AUTO_TYPED_INSTANCE_HOOK(
+    RemoveVolumeEntityPacketHook,
+    ll::memory::HookPriority::Lowest,
+    RemoveVolumeEntityPacket,
+    "?write@RemoveVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z",
+    void,
+    BinaryStream const& bs
+) {
+    if (this->mDimensionType == 1) {
+        this->mDimensionType = 2;
+    }
+    return origin(bs);
+}
+
+LL_AUTO_TYPED_INSTANCE_HOOK(
+    SetSpawnPositionPacketHook,
+    ll::memory::HookPriority::Lowest,
+    SetSpawnPositionPacket,
+    "?write@SetSpawnPositionPacket@@UEBAXAEAVBinaryStream@@@Z",
+    void,
+    BinaryStream const& bs
+) {
+    if (this->mDimensionType == 1) {
+        this->mDimensionType = 2;
+    }
+    return origin(bs);
+}
+
+LL_AUTO_TYPED_INSTANCE_HOOK(
+    SpawnParticleEffectPacketHook,
+    ll::memory::HookPriority::Lowest,
+    SpawnParticleEffectPacket,
+    "?write@SpawnParticleEffectPacket@@UEBAXAEAVBinaryStream@@@Z",
+    void,
+    BinaryStream const& bs
+) {
+    if (this->mVanillaDimensionId == 1) {
+        this->mVanillaDimensionId = 2;
+    }
+    return origin(bs);
+}
