@@ -19,7 +19,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     SubChunkRequestPacket&   pkt
 ) {
     auto pl            = this->getServerPlayer(id, pkt.mClientSubId);
-    pkt.mDimensionType = pl.value().getDimensionId();
+    pkt.mDimensionType = pl->getDimensionId();
     return origin(id, pkt);
 }
 
