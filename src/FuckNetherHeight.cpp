@@ -9,7 +9,7 @@ void PatchNetherHeight() {
     ModUtils::Replace(address, TCHelper::splitHex("41 B9 00 00 80 00"), TCHelper::splitHex8("41 B9 00 00 00 01"));
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     SubChunkRequestHandle,
     ll::memory::HookPriority::Lowest,
     ServerNetworkHandler,
@@ -23,7 +23,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     return origin(id, pkt);
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     SubChunkPacketWrite,
     ll::memory::HookPriority::Lowest,
     SubChunkPacket,
@@ -37,7 +37,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     return origin(bs);
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     ChangeDimensionPacketWrite,
     ll::memory::HookPriority::Lowest,
     ChangeDimensionPacket,
@@ -51,7 +51,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     return origin(bs);
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     StartGamePacketWrite,
     ll::memory::HookPriority::Lowest,
     StartGamePacket,
@@ -65,7 +65,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     return origin(bs);
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     ClientGenerationHook,
     ll::memory::HookPriority::Lowest,
     PropertiesSettings,
@@ -75,7 +75,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     return false;
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     AddVolumeEntityPacketHook,
     ll::memory::HookPriority::Lowest,
     AddVolumeEntityPacket,
@@ -89,7 +89,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     return origin(bs);
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     ClientboundMapItemDataPacketHook,
     ll::memory::HookPriority::Lowest,
     ClientboundMapItemDataPacket,
@@ -103,7 +103,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     return origin(bs);
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     RemoveVolumeEntityPacketHook,
     ll::memory::HookPriority::Lowest,
     RemoveVolumeEntityPacket,
@@ -117,7 +117,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     return origin(bs);
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     SetSpawnPositionPacketHook,
     ll::memory::HookPriority::Lowest,
     SetSpawnPositionPacket,
@@ -131,7 +131,7 @@ LL_AUTO_TYPED_INSTANCE_HOOK(
     return origin(bs);
 }
 
-LL_AUTO_TYPED_INSTANCE_HOOK(
+LL_AUTO_TYPE_INSTANCE_HOOK(
     SpawnParticleEffectPacketHook,
     ll::memory::HookPriority::Lowest,
     SpawnParticleEffectPacket,

@@ -1,7 +1,13 @@
 add_rules("mode.debug", "mode.release", "mode.releasedbg")
 
 add_repositories("liteldev-repo https://github.com/LiteLDev/xmake-repo.git")
-add_requires("levilamina 0.3.0") -- or add_requires("levilamina x.x.x") to specify target LeviLamina version
+
+if not has_config("vs_runtime") then
+    set_runtimes("MD")
+end
+
+-- Option 1: Use the latest version of LeviLamina released on GitHub.
+add_requires("levilamina")
 
 target("FuckNetherHeight") -- Change this to your plugin name.
     add_cxflags(

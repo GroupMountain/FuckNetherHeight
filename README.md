@@ -1,2 +1,2 @@
 # FuckNetherHeight
-Fuck Nether Height Limit
+Fuck Vanilla Bedrock Edition Nether Height Limit
