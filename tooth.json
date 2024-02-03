@@ -1,11 +1,11 @@
 {
     "format_version": 2,
     "tooth": "github.com/GroupMountain/FuckNetherHeight",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "info": {
         "name": "FuckNetherHeight",
         "description": "Fuck Vinalla Bedrock Edition Nether Height Limit",
-        "author": "Tsubasa6848",
+        "author": "GroupMountain",
         "source": "github.com/GroupMountain/FuckNetherHeight",
         "tags": [
             "LeveLamina",
