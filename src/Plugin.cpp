@@ -11,7 +11,7 @@ Plugin::Plugin(ll::plugin::NativePlugin& self) : mSelf(self) {
 
 bool Plugin::enable() {
     logger.info("FuckNetherHeight Loaded!");
-    logger.info("Author: Tsubasa6848");
+    logger.info("Author: GroupMountain");
     logger.info("Repository: https://github.com/GroupMountain/FuckNetherHeight");
     return true;
 }
