@@ -25,6 +25,7 @@
 #include <mc/world/ActorRuntimeID.h>
 #include <mc/world/level/ChangeDimensionRequest.h>
 #include <mc/world/level/Level.h>
+#include <mc/network/packet/LevelChunkPacket.h>
 
 extern ll::Logger logger;
 extern void       PatchNetherHeight();

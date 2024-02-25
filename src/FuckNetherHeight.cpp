@@ -16,6 +16,7 @@ void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunkZ, bool
 
     levelChunkPacket.mPos.x          = chunkX;
     levelChunkPacket.mPos.z          = chunkZ;
+    levelChunkPacket.mDimensionType  = 0;
     levelChunkPacket.mCacheEnabled   = false;
     levelChunkPacket.mSubChunksCount = 0;
 
@@ -108,7 +109,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_TYPE_INSTANCE_HOOK(
     LevelrequestPlayerChangeDimensionHandler,
-    HookPriority::Normal,
+    HookPriority::Lowest,
     Level,
     "?requestPlayerChangeDimension@Level@@UEAAXAEAVPlayer@@V?$unique_ptr@VChangeDimensionRequest@@U?$default_delete@"
     "VChangeDimensionRequest@@@std@@@std@@@Z",
@@ -218,6 +219,20 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 ) {
     if (this->mVanillaDimensionId == 1) {
         this->mVanillaDimensionId = 2;
+    }
+    return origin(bs);
+}
+
+LL_AUTO_TYPE_INSTANCE_HOOK(
+    LevelChunkPacketHook,
+    ll::memory::HookPriority::Lowest,
+    LevelChunkPacket,
+    "?write@LevelChunkPacket@@UEBAXAEAVBinaryStream@@@Z",
+    void,
+    BinaryStream const& bs
+) {
+    if (this->mDimensionType == 1) {
+        this->mDimensionType = 2;
     }
     return origin(bs);
 }
