@@ -138,7 +138,9 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
     BinaryStream const& bs
 ) {
     if (this->mSettings.getSpawnSettings().dimension == 1) {
-        this->mSettings.getSpawnSettings().dimension = 2;
+        auto settings      = this->mSettings.getSpawnSettings();
+        settings.dimension = 2;
+        this->mSettings.setSpawnSettings(settings);
     }
     return origin(bs);
 }
