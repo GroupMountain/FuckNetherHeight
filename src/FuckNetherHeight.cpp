@@ -107,18 +107,17 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 }
 
 
-LL_TYPE_INSTANCE_HOOK(
-    LevelrequestPlayerChangeDimensionHandler,
-    HookPriority::Lowest,
+LL_AUTO_TYPE_INSTANCE_HOOK(
+    TestHook,
+    HookPriority::Normal,
     Level,
-    "?requestPlayerChangeDimension@Level@@UEAAXAEAVPlayer@@V?$unique_ptr@VChangeDimensionRequest@@U?$default_delete@"
-    "VChangeDimensionRequest@@@std@@@std@@@Z",
+    "?requestPlayerChangeDimension@Level@@UEAAXAEAVPlayer@@$$QEAVChangeDimensionRequest@@@Z",
     void,
-    Player&                                 player,
-    std::unique_ptr<ChangeDimensionRequest> changeRequest
+    class Player&                  player,
+    class ChangeDimensionRequest&& changeRequest
 ) {
     auto inId = player.getDimensionId();
-    if ((inId == 1 && changeRequest->mToDimensionId == 2) || (inId == 2 && changeRequest->mToDimensionId == 1)) {
+    if ((inId == 1 && changeRequest.mToDimensionId == 2) || (inId == 2 && changeRequest.mToDimensionId == 1)) {
         dimension_utils::fakeChangeDimension(
             player.getNetworkIdentifier(),
             player.getRuntimeID(),
@@ -137,8 +136,8 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
     void,
     BinaryStream const& bs
 ) {
-    if (this->mSettings.getSpawnSettings().dimension == 1) {
-        auto settings      = this->mSettings.getSpawnSettings();
+    auto settings = this->mSettings.getSpawnSettings();
+    if (settings.dimension == 1) {
         settings.dimension = 2;
         this->mSettings.setSpawnSettings(settings);
     }
