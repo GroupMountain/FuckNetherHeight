@@ -48,6 +48,8 @@ void fakeChangeDimension(
     DimensionType            fakeDimId,
     const Vec3&              pos
 ) {
+    PlayerFogPacket fogPacket{{}};
+    ll::service::getLevel()->getPacketSender()->sendToClient(netId, fogPacket, SubClientId::PrimaryClient);
     ChangeDimensionPacket changeDimensionPacket{fakeDimId, pos, true};
     ll::service::getLevel()->getPacketSender()->sendToClient(netId, changeDimensionPacket, SubClientId::PrimaryClient);
     PlayerActionPacket playerActionPacket{PlayerActionType::ChangeDimensionAck, runtimeId};
@@ -66,7 +68,7 @@ void PatchNetherHeight() {
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     SubChunkRequestHandle,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     ServerNetworkHandler,
     "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVSubChunkRequestPacket@@@Z",
     void,
@@ -80,7 +82,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     SubChunkPacketWrite,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     SubChunkPacket,
     "?write@SubChunkPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
@@ -94,7 +96,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     ChangeDimensionPacketWrite,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     ChangeDimensionPacket,
     "?write@ChangeDimensionPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
@@ -108,7 +110,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
-    TestHook,
+    LevelRequestPlayerChangeDimensionHook,
     HookPriority::Normal,
     Level,
     "?requestPlayerChangeDimension@Level@@UEAAXAEAVPlayer@@$$QEAVChangeDimensionRequest@@@Z",
@@ -130,7 +132,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     StartGamePacketWrite,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     StartGamePacket,
     "?write@StartGamePacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
@@ -146,7 +148,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     ClientGenerationHook,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     PropertiesSettings,
     &PropertiesSettings::isClientSideGenEnabled,
     bool
@@ -156,7 +158,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     AddVolumeEntityPacketHook,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     AddVolumeEntityPacket,
     "?write@AddVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
@@ -170,7 +172,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     ClientboundMapItemDataPacketHook,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     ClientboundMapItemDataPacket,
     "?write@ClientboundMapItemDataPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
@@ -184,7 +186,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     RemoveVolumeEntityPacketHook,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     RemoveVolumeEntityPacket,
     "?write@RemoveVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
@@ -198,7 +200,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     SetSpawnPositionPacketHook,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     SetSpawnPositionPacket,
     "?write@SetSpawnPositionPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
@@ -212,7 +214,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     SpawnParticleEffectPacketHook,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     SpawnParticleEffectPacket,
     "?write@SpawnParticleEffectPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
@@ -226,7 +228,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
 
 LL_AUTO_TYPE_INSTANCE_HOOK(
     LevelChunkPacketHook,
-    ll::memory::HookPriority::Lowest,
+    ll::memory::HookPriority::Normal,
     LevelChunkPacket,
     "?write@LevelChunkPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,

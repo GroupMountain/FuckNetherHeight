@@ -13,6 +13,7 @@
 #include <mc/network/packet/ClientboundMapItemDataPacket.h>
 #include <mc/network/packet/LevelChunkPacket.h>
 #include <mc/network/packet/PlayerActionPacket.h>
+#include <mc/network/packet/PlayerFogPacket.h>
 #include <mc/network/packet/RemoveVolumeEntityPacket.h>
 #include <mc/network/packet/SetSpawnPositionPacket.h>
 #include <mc/network/packet/SpawnParticleEffectPacket.h>
@@ -25,7 +26,6 @@
 #include <mc/world/ActorRuntimeID.h>
 #include <mc/world/level/ChangeDimensionRequest.h>
 #include <mc/world/level/Level.h>
-#include <mc/network/packet/LevelChunkPacket.h>
 
 extern ll::Logger logger;
 extern void       PatchNetherHeight();
