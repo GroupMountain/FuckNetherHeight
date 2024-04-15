@@ -1,5 +1,6 @@
 {
     "name": "FuckNetherHeight",
     "entry": "FuckNetherHeight.dll",
-    "type": "native"
+    "type": "native",
+    "version": "0.11.0"
 }
