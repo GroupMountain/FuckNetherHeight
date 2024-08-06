@@ -4,7 +4,7 @@ ll::Logger logger("FuckNetherHeight");
 
 namespace plugin {
 
-Plugin::Plugin(ll::plugin::NativePlugin& self) : mSelf(self) {
+Plugin::Plugin(ll::mod::NativeMod& self) : mSelf(self) {
     // Code for loading the plugin goes here.
     PatchNetherHeight();
 }

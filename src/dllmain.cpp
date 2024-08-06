@@ -8,7 +8,7 @@ namespace plugin {
 std::unique_ptr<Plugin> plugin = nullptr;
 
 extern "C" {
-_declspec(dllexport) bool ll_plugin_load(ll::plugin::NativePlugin& self) {
+_declspec(dllexport) bool ll_plugin_load(ll::mod::NativeMod& self) {
     plugin = std::make_unique<plugin::Plugin>(self);
 
     return true;
@@ -22,9 +22,9 @@ _declspec(dllexport) bool ll_plugin_load(ll::plugin::NativePlugin& self) {
 //     return true;
 // }
 
-_declspec(dllexport) bool ll_plugin_enable(ll::plugin::NativePlugin&) { return plugin->enable(); }
+_declspec(dllexport) bool ll_plugin_enable(ll::mod::NativeMod&) { return plugin->enable(); }
 
-_declspec(dllexport) bool ll_plugin_disable(ll::plugin::NativePlugin&) { return plugin->disable(); }
+_declspec(dllexport) bool ll_plugin_disable(ll::mod::NativeMod&) { return plugin->disable(); }
 }
 
 } // namespace plugin
