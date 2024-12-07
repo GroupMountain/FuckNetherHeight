@@ -1,12 +1,12 @@
 #pragma once
 #include "Global.h"
-#include <ll/api/plugin/NativePlugin.h>
+#include "ll/api/mod/NativeMod.h"
 
 namespace plugin {
 
 class Plugin {
 public:
-    explicit Plugin(ll::plugin::NativePlugin& self);
+    explicit Plugin(ll::mod::NativeMod& self);
 
     Plugin(Plugin&&)                 = delete;
     Plugin(const Plugin&)            = delete;
@@ -22,7 +22,7 @@ public:
     bool disable();
 
 private:
-    ll::plugin::NativePlugin& mSelf;
+    ll::mod::NativeMod& mSelf;
 };
 
 } // namespace plugin
