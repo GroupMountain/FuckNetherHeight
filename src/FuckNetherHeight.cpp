@@ -1,154 +1,79 @@
 #include "Global.h"
-#include "TCHelper.h"
 
 namespace dimension_utils {
-void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunkZ, bool forceUpdate) {
+void sendEmptyChunk(Player& player, int chunkX, int chunkZ, bool forceUpdate) {
+    GMLIB_BinaryStream stream;
+    stream.writePacketHeader(MinecraftPacketIds::LevelChunk); // header
+    stream.writeVarInt(chunkX);                               // chunkX
+    stream.writeVarInt(chunkZ);                               // chunkZ
+    stream.writeVarInt(VanillaDimensions::TheEnd.id);         // dimensionId
+    stream.writeUnsignedVarInt(0);                            // subChunkCount
+    stream.writeBool(false);                                  // cacheEnabled
     std::array<uchar, 4096> biome{};
-    LevelChunkPacket        levelChunkPacket;
-    BinaryStream            binaryStream{levelChunkPacket.mSerializedChunk, false};
-    VarIntDataOutput        varIntDataOutput(&binaryStream);
-
-    varIntDataOutput.writeBytes(&biome, 4096); // write void biome
+    stream.write(&biome, 4096); // write void biome
     for (int i = 1; i < 8; i++) {
-        varIntDataOutput.writeByte((127 << 1) | 1);
+        stream.writeByte((127 << 1) | 1);
     }
-    varIntDataOutput.mStream->writeUnsignedChar(0); // write border blocks
-
-    levelChunkPacket.mPos.x          = chunkX;
-    levelChunkPacket.mPos.z          = chunkZ;
-    levelChunkPacket.mDimensionType  = 0;
-    levelChunkPacket.mCacheEnabled   = false;
-    levelChunkPacket.mSubChunksCount = 0;
-
-    ll::service::getLevel()->getPacketSender()->sendToClient(netId, levelChunkPacket, SubClientId::PrimaryClient);
+    stream.writeUnsignedChar(0); // write border blocks
+    stream.sendTo(player);
 
     if (forceUpdate) {
-        NetworkBlockPosition pos{chunkX << 4, 80, chunkZ << 4};
-        UpdateBlockPacket    blockPacket;
-        blockPacket.mPos         = pos;
-        blockPacket.mLayer       = UpdateBlockPacket::BlockLayer::Standard;
-        blockPacket.mUpdateFlags = BlockUpdateFlag::Neighbors;
-        ll::service::getLevel()->getPacketSender()->sendToClient(netId, blockPacket, SubClientId::PrimaryClient);
+        UpdateBlockPacket(
+            {chunkX << 4, 80, chunkZ << 4},
+            (uint)UpdateBlockPacket::BlockLayer::Standard,
+            0,
+            (uchar)BlockUpdateFlag::Neighbors
+        )
+            .sendTo(player);
     }
 }
 
-void sendEmptyChunks(const NetworkIdentifier& netId, const Vec3& position, int radius, bool forceUpdate) {
-    int chunkX = (int)(position.x) >> 4;
-    int chunkZ = (int)(position.z) >> 4;
+void sendEmptyChunks(Player& player, int radius, bool forceUpdate) {
+    int chunkX = (int)(player.getPosition().x) >> 4;
+    int chunkZ = (int)(player.getPosition().z) >> 4;
     for (int x = -radius; x <= radius; x++) {
         for (int z = -radius; z <= radius; z++) {
-            sendEmptyChunk(netId, chunkX + x, chunkZ + z, forceUpdate);
+            sendEmptyChunk(player, chunkX + x, chunkZ + z, forceUpdate);
         }
     }
 }
 
-void fakeChangeDimension(
-    const NetworkIdentifier& netId,
-    ActorRuntimeID           runtimeId,
-    DimensionType            fakeDimId,
-    const Vec3&              pos
-) {
-    PlayerFogPacket fogPacket{{}};
-    ll::service::getLevel()->getPacketSender()->sendToClient(netId, fogPacket, SubClientId::PrimaryClient);
-    ChangeDimensionPacket changeDimensionPacket{fakeDimId, pos, true};
-    ll::service::getLevel()->getPacketSender()->sendToClient(netId, changeDimensionPacket, SubClientId::PrimaryClient);
-    PlayerActionPacket playerActionPacket{PlayerActionType::ChangeDimensionAck, runtimeId};
-    ll::service::getLevel()->getPacketSender()->sendToClient(netId, playerActionPacket, SubClientId::PrimaryClient);
-    sendEmptyChunks(netId, pos, 3, true);
+void fakeChangeDimension(Player& player) {
+    PlayerFogPacket(std::vector<std::string>{}).sendTo(player);
+    ChangeDimensionPacket(VanillaDimensions::TheEnd, player.getPosition(), true).sendTo(player);
+    PlayerActionPacket(PlayerActionType::ChangeDimensionAck, player.getRuntimeID()).sendTo(player);
+    sendEmptyChunks(player, 3, true);
 }
 } // namespace dimension_utils
 
-void PatchNetherHeight() {
-    uintptr_t regionStart =
-        (uintptr_t)ll::memory::resolveSymbol("??0NetherDimension@@QEAA@AEAVILevel@@AEAVScheduler@@@Z");
-    std::vector<uint16_t> pattern = TCHelper::splitHex("41 B9 00 00 80 00");
-    uintptr_t             address = ModUtils::SigScan(pattern, regionStart, 0x300);
-    ModUtils::Replace(address, TCHelper::splitHex("41 B9 00 00 80 00"), TCHelper::splitHex8("41 B9 00 00 00 01"));
-}
-
-LL_AUTO_TYPE_INSTANCE_HOOK(
-    SubChunkRequestHandle,
-    ll::memory::HookPriority::Normal,
-    ServerNetworkHandler,
-    "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVSubChunkRequestPacket@@@Z",
-    void,
-    NetworkIdentifier const& id,
-    SubChunkRequestPacket&   pkt
-) {
-    auto pl            = this->getServerPlayer(id, pkt.mClientSubId);
-    pkt.mDimensionType = pl->getDimensionId();
-    return origin(id, pkt);
-}
-
-LL_AUTO_TYPE_INSTANCE_HOOK(
-    SubChunkPacketWrite,
-    ll::memory::HookPriority::Normal,
-    SubChunkPacket,
-    "?write@SubChunkPacket@@UEBAXAEAVBinaryStream@@@Z",
-    void,
-    BinaryStream const& bs
-) {
-    if (this->mDimensionType == 1) {
-        this->mDimensionType = 2;
+#define DIM_ID_MODIRY(name, ...)                                                                                       \
+    if (name == VanillaDimensions::Nether) {                                                                           \
+        name = VanillaDimensions::TheEnd;                                                                              \
+        __VA_ARGS__                                                                                                    \
     }
-    return origin(bs);
-}
 
-LL_AUTO_TYPE_INSTANCE_HOOK(
-    ChangeDimensionPacketWrite,
-    ll::memory::HookPriority::Normal,
-    ChangeDimensionPacket,
-    "?write@ChangeDimensionPacket@@UEBAXAEAVBinaryStream@@@Z",
-    void,
-    BinaryStream const& bs
-) {
-    if (this->mDimensionId == 1) {
-        this->mDimensionId = 2;
-    }
-    return origin(bs);
-}
-
-
-LL_AUTO_TYPE_INSTANCE_HOOK(
-    LevelRequestPlayerChangeDimensionHook,
+LL_TYPE_INSTANCE_HOOK(
+    ModifyNetherHeightHook,
     HookPriority::Normal,
-    Level,
-    "?requestPlayerChangeDimension@Level@@UEAAXAEAVPlayer@@$$QEAVChangeDimensionRequest@@@Z",
-    void,
-    class Player&                  player,
-    class ChangeDimensionRequest&& changeRequest
+    Dimension,
+    "??0Dimension@@QEAA@AEAVILevel@@V?$AutomaticID@VDimension@@H@@VDimensionHeightRange@@AEAVScheduler@@V?$basic_"
+    "string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+    Dimension*,
+    ILevel&              level,
+    DimensionType        dimId,
+    DimensionHeightRange heightRange,
+    Scheduler&           callbackContext,
+    std::string          name
 ) {
-    auto inId = player.getDimensionId();
-    if ((inId == 1 && changeRequest.mToDimensionId == 2) || (inId == 2 && changeRequest.mToDimensionId == 1)) {
-        dimension_utils::fakeChangeDimension(
-            player.getNetworkIdentifier(),
-            player.getRuntimeID(),
-            0,
-            player.getPosition()
-        );
+    if (dimId == VanillaDimensions::Nether) {
+        heightRange.max = 256;
     }
-    return origin(player, std::move(changeRequest));
+    return origin(level, dimId, heightRange, callbackContext, name);
 }
 
-LL_AUTO_TYPE_INSTANCE_HOOK(
-    StartGamePacketWrite,
-    ll::memory::HookPriority::Normal,
-    StartGamePacket,
-    "?write@StartGamePacket@@UEBAXAEAVBinaryStream@@@Z",
-    void,
-    BinaryStream const& bs
-) {
-    auto settings = this->mSettings.getSpawnSettings();
-    if (settings.dimension == 1) {
-        settings.dimension = 2;
-        this->mSettings.setSpawnSettings(settings);
-    }
-    return origin(bs);
-}
-
-LL_AUTO_TYPE_INSTANCE_HOOK(
+LL_TYPE_INSTANCE_HOOK(
     ClientGenerationHook,
-    ll::memory::HookPriority::Normal,
+    HookPriority::Normal,
     PropertiesSettings,
     &PropertiesSettings::isClientSideGenEnabled,
     bool
@@ -156,86 +81,168 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
     return false;
 }
 
-LL_AUTO_TYPE_INSTANCE_HOOK(
+LL_TYPE_INSTANCE_HOOK(
+    SubChunkRequestHandle,
+    HookPriority::Normal,
+    ServerNetworkHandler,
+    "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVSubChunkRequestPacket@@@Z",
+    void,
+    NetworkIdentifier const& id,
+    SubChunkRequestPacket&   pkt
+) {
+    pkt.mDimensionType = this->getServerPlayer(id, pkt.mClientSubId)->getDimensionId();
+    return origin(id, pkt);
+}
+
+LL_TYPE_INSTANCE_HOOK(
+    SubChunkPacketWrite,
+    HookPriority::Normal,
+    SubChunkPacket,
+    "?write@SubChunkPacket@@UEBAXAEAVBinaryStream@@@Z",
+    void,
+    BinaryStream const& stream
+) {
+    DIM_ID_MODIRY(this->mDimensionType);
+    return origin(stream);
+}
+
+LL_TYPE_INSTANCE_HOOK(
+    ChangeDimensionPacketWrite,
+    HookPriority::Normal,
+    ChangeDimensionPacket,
+    "?write@ChangeDimensionPacket@@UEBAXAEAVBinaryStream@@@Z",
+    void,
+    BinaryStream const& stream
+) {
+    DIM_ID_MODIRY(this->mDimensionId);
+    return origin(stream);
+}
+
+LL_TYPE_INSTANCE_HOOK(
+    LevelRequestPlayerChangeDimensionHook,
+    HookPriority::Normal,
+    Level,
+    "?requestPlayerChangeDimension@Level@@UEAAXAEAVPlayer@@$$QEAVChangeDimensionRequest@@@Z",
+    void,
+    Player&                  player,
+    ChangeDimensionRequest&& changeRequest
+) {
+    auto fromId = player.getDimensionId();
+    if ((fromId == 1 && changeRequest.mToDimensionId == 2) || (fromId == 2 && changeRequest.mToDimensionId == 1)) {
+        dimension_utils::fakeChangeDimension(player);
+    }
+    return origin(player, std::move(changeRequest));
+}
+
+LL_TYPE_INSTANCE_HOOK(
+    StartGamePacketWrite,
+    HookPriority::Normal,
+    StartGamePacket,
+    "?write@StartGamePacket@@UEBAXAEAVBinaryStream@@@Z",
+    void,
+    BinaryStream const& stream
+) {
+    auto settings = this->mSettings.getSpawnSettings();
+    DIM_ID_MODIRY(settings.dimension, this->mSettings.setSpawnSettings(settings););
+    return origin(stream);
+}
+
+LL_TYPE_INSTANCE_HOOK(
     AddVolumeEntityPacketHook,
-    ll::memory::HookPriority::Normal,
+    HookPriority::Normal,
     AddVolumeEntityPacket,
     "?write@AddVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
-    BinaryStream const& bs
+    BinaryStream const& stream
 ) {
-    if (this->mDimensionType == 1) {
-        this->mDimensionType = 2;
-    }
-    return origin(bs);
+    DIM_ID_MODIRY(this->mDimensionType);
+    return origin(stream);
 }
 
-LL_AUTO_TYPE_INSTANCE_HOOK(
+LL_TYPE_INSTANCE_HOOK(
     ClientboundMapItemDataPacketHook,
-    ll::memory::HookPriority::Normal,
+    HookPriority::Normal,
     ClientboundMapItemDataPacket,
     "?write@ClientboundMapItemDataPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
-    BinaryStream const& bs
+    BinaryStream const& stream
 ) {
-    if (this->mDimension == 1) {
-        this->mDimension = 2;
-    }
-    return origin(bs);
+    DIM_ID_MODIRY(this->mDimension);
+    return origin(stream);
 }
 
-LL_AUTO_TYPE_INSTANCE_HOOK(
+LL_TYPE_INSTANCE_HOOK(
     RemoveVolumeEntityPacketHook,
-    ll::memory::HookPriority::Normal,
+    HookPriority::Normal,
     RemoveVolumeEntityPacket,
     "?write@RemoveVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
-    BinaryStream const& bs
+    BinaryStream const& stream
 ) {
-    if (this->mDimensionType == 1) {
-        this->mDimensionType = 2;
-    }
-    return origin(bs);
+    DIM_ID_MODIRY(this->mDimensionType);
+    return origin(stream);
 }
 
-LL_AUTO_TYPE_INSTANCE_HOOK(
+LL_TYPE_INSTANCE_HOOK(
     SetSpawnPositionPacketHook,
-    ll::memory::HookPriority::Normal,
+    HookPriority::Normal,
     SetSpawnPositionPacket,
     "?write@SetSpawnPositionPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
-    BinaryStream const& bs
+    BinaryStream const& stream
 ) {
-    if (this->mDimensionType == 1) {
-        this->mDimensionType = 2;
-    }
-    return origin(bs);
+    DIM_ID_MODIRY(this->mDimensionType);
+    return origin(stream);
 }
 
-LL_AUTO_TYPE_INSTANCE_HOOK(
+LL_TYPE_INSTANCE_HOOK(
     SpawnParticleEffectPacketHook,
-    ll::memory::HookPriority::Normal,
+    HookPriority::Normal,
     SpawnParticleEffectPacket,
     "?write@SpawnParticleEffectPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
-    BinaryStream const& bs
+    BinaryStream const& stream
 ) {
-    if (this->mVanillaDimensionId == 1) {
-        this->mVanillaDimensionId = 2;
-    }
-    return origin(bs);
+    DIM_ID_MODIRY(this->mVanillaDimensionId);
+    return origin(stream);
 }
 
-LL_AUTO_TYPE_INSTANCE_HOOK(
+LL_TYPE_INSTANCE_HOOK(
     LevelChunkPacketHook,
-    ll::memory::HookPriority::Normal,
+    HookPriority::Normal,
     LevelChunkPacket,
     "?write@LevelChunkPacket@@UEBAXAEAVBinaryStream@@@Z",
     void,
-    BinaryStream const& bs
+    BinaryStream const& stream
 ) {
-    if (this->mDimensionType == 1) {
-        this->mDimensionType = 2;
-    }
-    return origin(bs);
+    DIM_ID_MODIRY(this->mDimensionType);
+    return origin(stream);
+}
+
+struct Impl {
+    ll::memory::HookRegistrar<
+        ModifyNetherHeightHook,
+        ClientGenerationHook,
+        SubChunkRequestHandle,
+        SubChunkPacketWrite,
+        ChangeDimensionPacketWrite,
+        LevelRequestPlayerChangeDimensionHook,
+        StartGamePacketWrite,
+        AddVolumeEntityPacketHook,
+        ClientboundMapItemDataPacketHook,
+        RemoveVolumeEntityPacketHook,
+        SetSpawnPositionPacketHook,
+        SpawnParticleEffectPacketHook,
+        LevelChunkPacketHook>
+        hook;
+};
+
+static std::unique_ptr<Impl> impl;
+
+void enableMod() {
+    if (!impl) impl = std::make_unique<Impl>();
+}
+
+void disableMod() {
+    if (impl) impl.reset();
 }

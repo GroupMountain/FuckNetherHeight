@@ -7,11 +7,11 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
       - uses: xmake-io/github-action-setup-xmake@v1
-        with:
-          xmake-version: branch@master
+      
       - run: |
           xmake repo -u
 
@@ -21,7 +21,7 @@ jobs:
       - run: |
           xmake -w -y
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.repository.name }}-windows-x64-${{ github.sha }}
           path: |
@@ -34,24 +34,26 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v3
+      - name: Download Mod
+        uses: actions/download-artifact@v4
         with:
           name: ${{ github.event.repository.name }}-windows-x64-${{ github.sha }}
-          path: release/
+          path: artifact
 
-      - run: |
-          cp LICENSE README.md release/
+      - name: Copy additional files
+        run: |
+          cp -v LICENSE README.md artifact/
 
       - name: Archive release
         run: |
-          cd release
           zip -r ../${{ github.event.repository.name }}-windows-x64.zip *
-          cd ..
+        working-directory: artifact
 
-      - uses: softprops/action-gh-release@v1
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          append_body: true
           files: |
             ${{ github.event.repository.name }}-windows-x64.zip

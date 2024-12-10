@@ -1,6 +1,13 @@
 {
-    "name": "FuckNetherHeight",
-    "entry": "FuckNetherHeight.dll",
+    "name": "${modName}",
+    "entry": "${modFile}",
     "type": "native",
-    "version": "0.13.5"
+    "version": "${modVersion}",
+    "description": "Fuck Vanilla Bedrock Edition Nether Height Limit",
+    "author": "GroupMountain",
+    "dependencies": [
+        {
+            "name": "GMLIB"
+        }
+    ]
 }
