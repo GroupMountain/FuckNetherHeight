@@ -2,20 +2,24 @@
 
 namespace dimension_utils {
 void sendEmptyChunk(Player& player, int chunkX, int chunkZ, bool forceUpdate) {
-    GMLIB_BinaryStream stream;
-    stream.writePacketHeader(MinecraftPacketIds::LevelChunk); // header
-    stream.writeVarInt(chunkX);                               // chunkX
-    stream.writeVarInt(chunkZ);                               // chunkZ
-    stream.writeVarInt(VanillaDimensions::TheEnd.id);         // dimensionId
-    stream.writeUnsignedVarInt(0);                            // subChunkCount
-    stream.writeBool(false);                                  // cacheEnabled
     std::array<uchar, 4096> biome{};
-    stream.write(&biome, 4096); // write void biome
+    LevelChunkPacket        levelChunkPacket;
+    BinaryStream            binaryStream{levelChunkPacket.mSerializedChunk, false};
+    VarIntDataOutput        varIntDataOutput(&binaryStream);
+
+    varIntDataOutput.writeBytes(&biome, 4096); // write void biome
     for (int i = 1; i < 8; i++) {
-        stream.writeByte((127 << 1) | 1);
+        varIntDataOutput.writeByte((127 << 1) | 1);
     }
-    stream.writeUnsignedChar(0); // write border blocks
-    stream.sendTo(player);
+    varIntDataOutput.mStream->writeUnsignedChar(0); // write border blocks
+
+    levelChunkPacket.mPos.x          = chunkX;
+    levelChunkPacket.mPos.z          = chunkZ;
+    levelChunkPacket.mDimensionType  = 0;
+    levelChunkPacket.mCacheEnabled   = false;
+    levelChunkPacket.mSubChunksCount = 0;
+
+    levelChunkPacket.sendTo(player);
 
     if (forceUpdate) {
         UpdateBlockPacket(
@@ -40,8 +44,8 @@ void sendEmptyChunks(Player& player, int radius, bool forceUpdate) {
 
 void fakeChangeDimension(Player& player) {
     PlayerFogPacket(std::vector<std::string>{}).sendTo(player);
-    ChangeDimensionPacket(VanillaDimensions::TheEnd, player.getPosition(), true).sendTo(player);
-    PlayerActionPacket(PlayerActionType::ChangeDimensionAck, player.getRuntimeID()).sendTo(player);
+    ChangeDimensionPacket(VanillaDimensions::Overworld, player.getPosition(), true).sendTo(player);
+    PlayerActionPacket(PlayerActionType::ChangeDimensionAck, player.getRuntimeID()).sendTo(player); 
     sendEmptyChunks(player, 3, true);
 }
 } // namespace dimension_utils
