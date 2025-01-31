@@ -1,12 +1,11 @@
 #pragma once
 
-#include <span> // temporarily fix the workflows build
-
 #include "Entry.h"
-#include <include_all.h>
+#include "gmlib/include_lib.h" // IWYU pragma: keep
+#include "gmlib/include_ll.h"  // IWYU pragma: keep
 
 #define selfMod FuckNetherHeight::Entry::getInstance()
-#define logger  selfMod->getSelf().getLogger()
+#define logger  selfMod.getSelf().getLogger()
 
 extern void enableMod();
 extern void disableMod();

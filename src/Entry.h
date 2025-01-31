@@ -8,11 +8,11 @@ namespace FuckNetherHeight {
 class Entry {
 
 public:
-    static std::unique_ptr<Entry>& getInstance();
+    static Entry& getInstance();
 
-    Entry(ll::mod::NativeMod& self) : mSelf(self) {}
+    Entry() : mSelf(ll::mod::NativeMod::current()) {}
 
-    [[nodiscard]] ll::mod::NativeMod& getSelf() const { return mSelf; }
+    [[nodiscard]] ll::mod::NativeMod& getSelf() const { return *mSelf; }
 
     bool load();
 
@@ -21,7 +21,7 @@ public:
     bool disable();
 
 private:
-    ll::mod::NativeMod& mSelf;
+    std::shared_ptr<ll::mod::NativeMod> mSelf;
 };
 
 } // namespace FuckNetherHeight

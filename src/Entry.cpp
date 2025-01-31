@@ -2,13 +2,13 @@
 
 namespace FuckNetherHeight {
 
-std::unique_ptr<Entry>& Entry::getInstance() {
-    static std::unique_ptr<Entry> instance;
+Entry& Entry::getInstance() {
+    static Entry instance;
     return instance;
 }
 
 bool Entry::load() {
-    if (ll::getServerStatus() != ll::ServerStatus::Starting) {
+    if (ll::getGamingStatus() != ll::GamingStatus::Starting) {
         logger.error("FuckNetherHeight must be loaded at startup!");
         return false;
     }
