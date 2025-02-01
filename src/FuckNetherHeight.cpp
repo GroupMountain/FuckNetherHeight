@@ -52,12 +52,11 @@ void sendEmptyChunk(Player& player, int chunkX, int chunkZ, bool forceUpdate) {
 
     levelChunkPacket.sendTo(player);
 
-    // todo(killcerr): fix forceUpdate
     if (forceUpdate) {
         UpdateBlockPacket(
             {chunkX << 4, 80, chunkZ << 4},
             (uint)SubChunk::BlockLayer::Standard,
-            BlockTypeRegistry::getDefaultBlockState("minecraft:air").getBlockItemId(),
+            BlockTypeRegistry::getDefaultBlockState("minecraft:air").getRuntimeId(),
             (uchar)1
         )
             .sendTo(player);
@@ -87,7 +86,7 @@ void fakeChangeDimension(Player& player) {
     binaryStream.writeUnsignedInt(manager->getNextLoadingScreenId().mValue.value());
     binaryStream.sendTo(player);
     PlayerActionPacket(PlayerActionType::ChangeDimensionAck, player.getRuntimeID()).sendTo(player);
-    sendEmptyChunks(player, 3, false);
+    sendEmptyChunks(player, 3, true);
 }
 } // namespace dimension_utils
 
