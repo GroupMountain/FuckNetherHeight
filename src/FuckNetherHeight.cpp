@@ -19,8 +19,13 @@
 #include "mc/util/NewType.h" // IWYU pragma: keep
 #include "mc/util/VarIntDataOutput.h"
 #include "mc/world/level/ChangeDimensionRequest.h"
+#include "mc/world/level/IPlayerDimensionTransferProxy.h"
+#include "mc/world/level/ISharedSpawnGetter.h"
 #include "mc/world/level/LevelSettings.h"
+#include "mc/world/level/LoadingScreenIdManager.h"
+#include "mc/world/level/PlayerDimensionTransferer.h"
 #include "mc/world/level/SpawnSettings.h"
+#include "mc/world/level/block/registry/BlockTypeRegistry.h"
 #include "mc/world/level/chunk/SubChunk.h"
 #include "mc/world/level/dimension/Dimension.h"
 #include "mc/world/level/dimension/DimensionHeightRange.h"
@@ -47,8 +52,14 @@ void sendEmptyChunk(Player& player, int chunkX, int chunkZ, bool forceUpdate) {
 
     levelChunkPacket.sendTo(player);
 
+    // todo(killcerr): fix forceUpdate
     if (forceUpdate) {
-        UpdateBlockPacket({chunkX << 4, 80, chunkZ << 4}, (uint)SubChunk::BlockLayer::Standard, 0, (uchar)1)
+        UpdateBlockPacket(
+            {chunkX << 4, 80, chunkZ << 4},
+            (uint)SubChunk::BlockLayer::Standard,
+            BlockTypeRegistry::getDefaultBlockState("minecraft:air").getBlockItemId(),
+            (uchar)1
+        )
             .sendTo(player);
     }
 }
@@ -63,13 +74,47 @@ void sendEmptyChunks(Player& player, int radius, bool forceUpdate) {
     }
 }
 
+LoadingScreenIdManager* manager = nullptr;
+
 void fakeChangeDimension(Player& player) {
     PlayerFogPacket(std::vector<std::string>{}).sendTo(player);
-    ChangeDimensionPacket(VanillaDimensions::Overworld(), player.getPosition(), true, {std::nullopt}).sendTo(player);
+    GMLIB_BinaryStream binaryStream;
+    binaryStream.writePacketHeader(MinecraftPacketIds::ChangeDimension);
+    binaryStream.writeVarInt(VanillaDimensions::toSerializedInt(VanillaDimensions::Overworld()));
+    binaryStream.writeVec3(player.getPosition());
+    binaryStream.writeBool(true);
+    binaryStream.writeBool(true);
+    binaryStream.writeUnsignedInt(manager->getNextLoadingScreenId().mValue.value());
+    binaryStream.sendTo(player);
     PlayerActionPacket(PlayerActionType::ChangeDimensionAck, player.getRuntimeID()).sendTo(player);
-    sendEmptyChunks(player, 3, true);
+    sendEmptyChunks(player, 3, false);
 }
 } // namespace dimension_utils
+
+LL_TYPE_INSTANCE_HOOK(
+    PlayerDimensionTransfererCtorHook,
+    HookPriority::Normal,
+    PlayerDimensionTransferer,
+    &PlayerDimensionTransferer::$ctor,
+    void*,
+    ::std::unique_ptr<::IPlayerDimensionTransferProxy>   playerDimensionTransferProxy,
+    bool                                                 isClientSide,
+    ::Bedrock::NotNullNonOwnerPtr<::PortalForcer>        portalForcer,
+    ::std::unique_ptr<::ISharedSpawnGetter>              sharedSpawnGetter,
+    ::Bedrock::NonOwnerPointer<::LevelStorage>           levelStorage,
+    ::Bedrock::NonOwnerPointer<::LoadingScreenIdManager> loadingScreenIdManager
+) {
+    dimension_utils::manager = loadingScreenIdManager;
+    return origin(
+        std::move(playerDimensionTransferProxy),
+        isClientSide,
+        portalForcer,
+        std::move(sharedSpawnGetter),
+        levelStorage,
+        loadingScreenIdManager
+    );
+}
+
 
 #define DIM_ID_MODIRY(name, ...)                                                                                       \
     if (name == VanillaDimensions::Nether()) {                                                                         \
@@ -258,7 +303,8 @@ struct Impl {
         RemoveVolumeEntityPacketHook,
         SetSpawnPositionPacketHook,
         SpawnParticleEffectPacketHook,
-        LevelChunkPacketHook>
+        LevelChunkPacketHook,
+        PlayerDimensionTransfererCtorHook>
         hook;
 };
 
