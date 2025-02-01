@@ -16,6 +16,7 @@
 #include "mc/network/packet/SubChunkRequestPacket.h"
 #include "mc/network/packet/UpdateBlockPacket.h"
 #include "mc/server/PropertiesSettings.h"
+#include "mc/server/blob_cache/ActiveTransfersManager.h"
 #include "mc/util/NewType.h" // IWYU pragma: keep
 #include "mc/util/VarIntDataOutput.h"
 #include "mc/world/level/ChangeDimensionRequest.h"
@@ -86,7 +87,7 @@ void fakeChangeDimension(Player& player) {
     binaryStream.writeUnsignedInt(manager->getNextLoadingScreenId().mValue.value());
     binaryStream.sendTo(player);
     PlayerActionPacket(PlayerActionType::ChangeDimensionAck, player.getRuntimeID()).sendTo(player);
-    sendEmptyChunks(player, 3, true);
+    sendEmptyChunks(player, 3, false); // todo(killcerr): fix forceUpdate
 }
 } // namespace dimension_utils
 
@@ -275,7 +276,9 @@ LL_TYPE_INSTANCE_HOOK(
     DIM_ID_MODIRY(this->mVanillaDimensionId);
     return origin(stream);
 }
-
+LL_TYPE_INSTANCE_HOOK(CacheHook, HookPriority::Normal, ClientBlobCache::Server::ActiveTransfersManager, &ClientBlobCache::Server::ActiveTransfersManager::isCacheEnabledFor, bool, ::NetworkIdentifier const&) {
+    return false;
+}
 LL_TYPE_INSTANCE_HOOK(
     LevelChunkPacketHook,
     HookPriority::Normal,
@@ -285,6 +288,7 @@ LL_TYPE_INSTANCE_HOOK(
     BinaryStream const& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionId);
+    this->mCacheEnabled = false;
     return origin(stream);
 }
 
@@ -303,7 +307,8 @@ struct Impl {
         SetSpawnPositionPacketHook,
         SpawnParticleEffectPacketHook,
         LevelChunkPacketHook,
-        PlayerDimensionTransfererCtorHook>
+        PlayerDimensionTransfererCtorHook,
+        CacheHook>
         hook;
 };
 
