@@ -177,6 +177,19 @@ LL_TYPE_INSTANCE_HOOK(
 }
 
 LL_TYPE_INSTANCE_HOOK(
+    SubchunkPacketCtorHook,
+    HookPriority::Normal,
+    SubChunkPacket,
+    &SubChunkPacket::$ctor,
+    void*,
+    ::DimensionType const& dimension,
+    ::SubChunkPos const&   centerPos,
+    bool
+) {
+    return origin(dimension, centerPos, false);
+}
+
+LL_TYPE_INSTANCE_HOOK(
     ChangeDimensionPacketWrite,
     HookPriority::Normal,
     ChangeDimensionPacket,
@@ -198,7 +211,8 @@ LL_TYPE_INSTANCE_HOOK(
     ChangeDimensionRequest&& changeRequest
 ) {
     auto fromId = player.getDimensionId();
-    if ((fromId == 1 && *changeRequest.mToDimensionId == 2) || (fromId == 2 && *changeRequest.mToDimensionId == 1)) {
+    if ((fromId.id == 1 && changeRequest.mToDimensionId->id == 2)
+        || (fromId.id == 2 && changeRequest.mToDimensionId->id == 1)) {
         dimension_utils::fakeChangeDimension(player);
     }
     return origin(player, std::move(changeRequest));
@@ -237,7 +251,7 @@ LL_TYPE_INSTANCE_HOOK(
     void,
     BinaryStream const& stream
 ) {
-    DIM_ID_MODIRY(this->mDimension);
+    DIM_ID_MODIRY(DimensionType{this->mDimension});
     return origin(stream);
 }
 
@@ -273,7 +287,7 @@ LL_TYPE_INSTANCE_HOOK(
     void,
     BinaryStream const& stream
 ) {
-    DIM_ID_MODIRY(this->mVanillaDimensionId);
+    DIM_ID_MODIRY(DimensionType{this->mVanillaDimensionId});
     return origin(stream);
 }
 LL_TYPE_INSTANCE_HOOK(CacheHook, HookPriority::Normal, ClientBlobCache::Server::ActiveTransfersManager, &ClientBlobCache::Server::ActiveTransfersManager::isCacheEnabledFor, bool, ::NetworkIdentifier const&) {
@@ -308,7 +322,8 @@ struct Impl {
         SpawnParticleEffectPacketHook,
         LevelChunkPacketHook,
         PlayerDimensionTransfererCtorHook,
-        CacheHook>
+        CacheHook,
+        SubchunkPacketCtorHook>
         hook;
 };
 
