@@ -1,37 +1,4 @@
 #include "Global.h"
-#include "mc/common/ActorRuntimeID.h" // IWYU pragma: keep
-#include "mc/deps/core/utility/AutomaticID.h"
-#include "mc/network/packet/AddVolumeEntityPacket.h"
-#include "mc/network/packet/ChangeDimensionPacket.h"
-#include "mc/network/packet/ClientboundMapItemDataPacket.h"
-#include "mc/network/packet/LevelChunkPacket.h"
-#include "mc/network/packet/PlayerActionPacket.h"
-#include "mc/network/packet/PlayerActionType.h"
-#include "mc/network/packet/PlayerFogPacket.h"
-#include "mc/network/packet/RemoveVolumeEntityPacket.h"
-#include "mc/network/packet/SetSpawnPositionPacket.h"
-#include "mc/network/packet/SpawnParticleEffectPacket.h"
-#include "mc/network/packet/StartGamePacket.h"
-#include "mc/network/packet/SubChunkPacket.h"
-#include "mc/network/packet/SubChunkRequestPacket.h"
-#include "mc/network/packet/UpdateBlockPacket.h"
-#include "mc/server/PropertiesSettings.h"
-#include "mc/server/blob_cache/ActiveTransfersManager.h"
-#include "mc/util/NewType.h" // IWYU pragma: keep
-#include "mc/util/VarIntDataOutput.h"
-#include "mc/world/level/ChangeDimensionRequest.h"
-#include "mc/world/level/IPlayerDimensionTransferProxy.h"
-#include "mc/world/level/ISharedSpawnGetter.h"
-#include "mc/world/level/LevelSettings.h"
-#include "mc/world/level/LoadingScreenIdManager.h"
-#include "mc/world/level/PlayerDimensionTransferer.h"
-#include "mc/world/level/SpawnSettings.h"
-#include "mc/world/level/block/registry/BlockTypeRegistry.h"
-#include "mc/world/level/chunk/SubChunk.h"
-#include "mc/world/level/dimension/Dimension.h"
-#include "mc/world/level/dimension/DimensionHeightRange.h"
-#include "mc/world/level/dimension/VanillaDimensions.h"
-
 
 namespace dimension_utils {
 void sendEmptyChunk(Player& player, int chunkX, int chunkZ, bool forceUpdate) {
@@ -126,8 +93,8 @@ LL_TYPE_INSTANCE_HOOK(
     ModifyNetherHeightHook,
     HookPriority::Normal,
     Dimension,
-    "??0Dimension@@QEAA@AEAVILevel@@V?$AutomaticID@VDimension@@H@@VDimensionHeightRange@@AEAVScheduler@@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z"_sym,
-    Dimension*,
+    &Dimension::$ctor,
+    void*,
     ILevel&              level,
     DimensionType        dimId,
     DimensionHeightRange heightRange,
@@ -154,23 +121,24 @@ LL_TYPE_INSTANCE_HOOK(
     SubChunkRequestHandle,
     HookPriority::Normal,
     ServerNetworkHandler,
-    "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVSubChunkRequestPacket@@@Z"_sym,
+    &ServerNetworkHandler::$handle,
     void,
-    NetworkIdentifier const& id,
-    SubChunkRequestPacket&   pkt
+    NetworkIdentifier const&     id,
+    SubChunkRequestPacket const& pkt
 ) {
-    pkt.mDimensionType =
+    SubChunkRequestPacket fakepkt = pkt;    //QwQ
+    fakepkt.mDimensionType =
         ll::service::getServerNetworkHandler()->_getServerPlayer(id, pkt.mClientSubId)->getDimensionId();
-    return origin(id, pkt);
+    return origin(id, fakepkt);
 }
 
 LL_TYPE_INSTANCE_HOOK(
     SubChunkPacketWrite,
     HookPriority::Normal,
     SubChunkPacket,
-    "?write@SubChunkPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &SubChunkPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionType);
     return origin(stream);
@@ -193,9 +161,9 @@ LL_TYPE_INSTANCE_HOOK(
     ChangeDimensionPacketWrite,
     HookPriority::Normal,
     ChangeDimensionPacket,
-    "?write@ChangeDimensionPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &ChangeDimensionPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionId);
     return origin(stream);
@@ -205,7 +173,7 @@ LL_TYPE_INSTANCE_HOOK(
     LevelRequestPlayerChangeDimensionHook,
     HookPriority::Normal,
     Level,
-    "?requestPlayerChangeDimension@Level@@UEAAXAEAVPlayer@@$$QEAVChangeDimensionRequest@@@Z"_sym,
+    &Level::$requestPlayerChangeDimension,
     void,
     Player&                  player,
     ChangeDimensionRequest&& changeRequest
@@ -222,9 +190,9 @@ LL_TYPE_INSTANCE_HOOK(
     StartGamePacketWrite,
     HookPriority::Normal,
     StartGamePacket,
-    "?write@StartGamePacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &StartGamePacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     auto settings = this->mSettings->getSpawnSettings();
     DIM_ID_MODIRY(*settings.dimension, this->mSettings->setSpawnSettings(settings););
@@ -235,9 +203,9 @@ LL_TYPE_INSTANCE_HOOK(
     AddVolumeEntityPacketHook,
     HookPriority::Normal,
     AddVolumeEntityPacket,
-    "?write@AddVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &AddVolumeEntityPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionType);
     return origin(stream);
@@ -247,9 +215,9 @@ LL_TYPE_INSTANCE_HOOK(
     ClientboundMapItemDataPacketHook,
     HookPriority::Normal,
     ClientboundMapItemDataPacket,
-    "?write@ClientboundMapItemDataPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &ClientboundMapItemDataPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(DimensionType{this->mDimension});
     return origin(stream);
@@ -259,9 +227,9 @@ LL_TYPE_INSTANCE_HOOK(
     RemoveVolumeEntityPacketHook,
     HookPriority::Normal,
     RemoveVolumeEntityPacket,
-    "?write@RemoveVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &RemoveVolumeEntityPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionType);
     return origin(stream);
@@ -271,9 +239,9 @@ LL_TYPE_INSTANCE_HOOK(
     SetSpawnPositionPacketHook,
     HookPriority::Normal,
     SetSpawnPositionPacket,
-    "?write@SetSpawnPositionPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &SetSpawnPositionPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionType);
     return origin(stream);
@@ -283,9 +251,9 @@ LL_TYPE_INSTANCE_HOOK(
     SpawnParticleEffectPacketHook,
     HookPriority::Normal,
     SpawnParticleEffectPacket,
-    "?write@SpawnParticleEffectPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &SpawnParticleEffectPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(DimensionType{this->mVanillaDimensionId});
     return origin(stream);
@@ -297,9 +265,9 @@ LL_TYPE_INSTANCE_HOOK(
     LevelChunkPacketHook,
     HookPriority::Normal,
     LevelChunkPacket,
-    "?write@LevelChunkPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &LevelChunkPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionId);
     this->mCacheEnabled = false;
