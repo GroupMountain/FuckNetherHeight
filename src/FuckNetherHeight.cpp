@@ -1,6 +1,8 @@
 #include "Global.h"
-#include "mc/common/ActorRuntimeID.h" // IWYU pragma: keep
 #include "mc/deps/core/utility/AutomaticID.h"
+#include "mc/legacy/ActorRuntimeID.h" // IWYU pragma: keep
+#include "mc/network/NetworkBlockPosition.h"
+#include "mc/network/ServerNetworkHandler.h"
 #include "mc/network/packet/AddVolumeEntityPacket.h"
 #include "mc/network/packet/ChangeDimensionPacket.h"
 #include "mc/network/packet/ClientboundMapItemDataPacket.h"
@@ -20,6 +22,7 @@
 #include "mc/util/NewType.h" // IWYU pragma: keep
 #include "mc/util/VarIntDataOutput.h"
 #include "mc/world/level/ChangeDimensionRequest.h"
+#include "mc/world/level/ChunkPos.h"
 #include "mc/world/level/IPlayerDimensionTransferProxy.h"
 #include "mc/world/level/ISharedSpawnGetter.h"
 #include "mc/world/level/LevelSettings.h"
@@ -34,33 +37,37 @@
 
 
 namespace dimension_utils {
-void sendEmptyChunk(Player& player, int chunkX, int chunkZ, bool forceUpdate) {
+// reference:
+// https://github.com/LiteLDev/MoreDimensions/blob/e71fd553f05e71ce2282a1f4baae1774f36431b3/src/more_dimensions/core/dimension/FakeDimensionId.cpp#L65
+static void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunkZ, bool forceUpdate) {
     std::array<uchar, 4096> biome{};
     LevelChunkPacket        levelChunkPacket;
     BinaryStream            binaryStream{levelChunkPacket.mSerializedChunk, false};
     VarIntDataOutput        varIntDataOutput(binaryStream);
 
     varIntDataOutput.writeBytes(&biome, 4096); // write void biome
-    for (int i = 1; i < 8; i++) {
-        varIntDataOutput.writeByte((127u << 1) | 1);
+    for (int i = 1; i <= 8; i++) {
+        varIntDataOutput.writeByte(255ui8);
     }
-    varIntDataOutput.mStream.writeUnsignedChar(0); // write border blocks
+    varIntDataOutput.mStream.writeByte(0, "Byte", 0); // write border blocks
+
     levelChunkPacket.mPos->x         = chunkX;
     levelChunkPacket.mPos->z         = chunkZ;
-    levelChunkPacket.mDimensionId    = 0;
+    levelChunkPacket.mDimensionId    = VanillaDimensions::Overworld();
     levelChunkPacket.mCacheEnabled   = false;
     levelChunkPacket.mSubChunksCount = 0;
 
-    levelChunkPacket.sendTo(player);
+    levelChunkPacket.sendToClient(netId, SubClientId::PrimaryClient);
 
     if (forceUpdate) {
-        UpdateBlockPacket(
-            {chunkX << 4, 80, chunkZ << 4},
-            (uint)SubChunk::BlockLayer::Standard,
-            BlockTypeRegistry::getDefaultBlockState("minecraft:air").getRuntimeId(),
-            (uchar)1
-        )
-            .sendTo(player);
+        NetworkBlockPosition pos{
+            BlockPos{chunkX << 4, 80, chunkZ << 4}
+        };
+        UpdateBlockPacket blockPacket;
+        blockPacket.mPos         = pos;
+        blockPacket.mLayer       = 0;
+        blockPacket.mUpdateFlags = 1;
+        blockPacket.sendToClient(netId, SubClientId::PrimaryClient);
     }
 }
 
@@ -69,7 +76,7 @@ void sendEmptyChunks(Player& player, int radius, bool forceUpdate) {
     int chunkZ = (int)(player.getPosition().z) >> 4;
     for (int x = -radius; x <= radius; x++) {
         for (int z = -radius; z <= radius; z++) {
-            sendEmptyChunk(player, chunkX + x, chunkZ + z, forceUpdate);
+            sendEmptyChunk(player.getNetworkIdentifier(), chunkX + x, chunkZ + z, forceUpdate);
         }
     }
 }
@@ -77,17 +84,20 @@ void sendEmptyChunks(Player& player, int radius, bool forceUpdate) {
 LoadingScreenIdManager* manager = nullptr;
 
 void fakeChangeDimension(Player& player) {
-    PlayerFogPacket(std::vector<std::string>{}).sendTo(player);
-    GMLIB_BinaryStream binaryStream;
+    PlayerFogPacket().sendTo(player);
+    gmlib::network::GMBinaryStream binaryStream;
     binaryStream.writePacketHeader(MinecraftPacketIds::ChangeDimension);
-    binaryStream.writeVarInt(VanillaDimensions::toSerializedInt(VanillaDimensions::Overworld()));
+    binaryStream.writeVarInt(VanillaDimensions::Overworld().id);
     binaryStream.writeVec3(player.getPosition());
     binaryStream.writeBool(true);
     binaryStream.writeBool(true);
-    binaryStream.writeUnsignedInt(manager->getNextLoadingScreenId().mValue.value());
-    binaryStream.sendTo(player);
-    PlayerActionPacket(PlayerActionType::ChangeDimensionAck, player.getRuntimeID()).sendTo(player);
-    sendEmptyChunks(player, 3, false); // todo(killcerr): fix forceUpdate
+    binaryStream.writeUnsignedInt(manager->mUnk7db596.as<uint>()++);
+    binaryStream.sendTo(player.getNetworkIdentifier());
+    PlayerActionPacket acp;
+    acp.mAction    = PlayerActionType::ChangeDimensionAck;
+    acp.mRuntimeId = player.getRuntimeID();
+    acp.sendTo(player);
+    sendEmptyChunks(player, 3, true);
 }
 } // namespace dimension_utils
 
@@ -144,10 +154,13 @@ LL_TYPE_INSTANCE_HOOK(
     ClientGenerationHook,
     HookPriority::Normal,
     PropertiesSettings,
-    &PropertiesSettings::isClientSideGenEnabled,
-    bool
+    &PropertiesSettings::$ctor,
+    void*,
+    std::string const& filename
 ) {
-    return false;
+    auto res                                                                 = origin(filename);
+    reinterpret_cast<PropertiesSettings*>(res)->mClientSideGenerationEnabled = false;
+    return res;
 }
 
 LL_TYPE_INSTANCE_HOOK(
@@ -180,22 +193,21 @@ LL_TYPE_INSTANCE_HOOK(
     SubchunkPacketCtorHook,
     HookPriority::Normal,
     SubChunkPacket,
-    &SubChunkPacket::$ctor,
-    void*,
-    ::DimensionType const& dimension,
-    ::SubChunkPos const&   centerPos,
-    bool
+    &SubChunkPacket::$write,
+    void,
+    BinaryStream& stream
 ) {
-    return origin(dimension, centerPos, false);
+    this->mCacheEnabled = false;
+    return origin(stream);
 }
 
 LL_TYPE_INSTANCE_HOOK(
     ChangeDimensionPacketWrite,
     HookPriority::Normal,
     ChangeDimensionPacket,
-    "?write@ChangeDimensionPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &ChangeDimensionPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionId);
     return origin(stream);
@@ -205,7 +217,7 @@ LL_TYPE_INSTANCE_HOOK(
     LevelRequestPlayerChangeDimensionHook,
     HookPriority::Normal,
     Level,
-    "?requestPlayerChangeDimension@Level@@UEAAXAEAVPlayer@@$$QEAVChangeDimensionRequest@@@Z"_sym,
+    &Level::$requestPlayerChangeDimension,
     void,
     Player&                  player,
     ChangeDimensionRequest&& changeRequest
@@ -222,9 +234,9 @@ LL_TYPE_INSTANCE_HOOK(
     StartGamePacketWrite,
     HookPriority::Normal,
     StartGamePacket,
-    "?write@StartGamePacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &StartGamePacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     auto settings = this->mSettings->getSpawnSettings();
     DIM_ID_MODIRY(*settings.dimension, this->mSettings->setSpawnSettings(settings););
@@ -235,9 +247,9 @@ LL_TYPE_INSTANCE_HOOK(
     AddVolumeEntityPacketHook,
     HookPriority::Normal,
     AddVolumeEntityPacket,
-    "?write@AddVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &AddVolumeEntityPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionType);
     return origin(stream);
@@ -247,9 +259,9 @@ LL_TYPE_INSTANCE_HOOK(
     ClientboundMapItemDataPacketHook,
     HookPriority::Normal,
     ClientboundMapItemDataPacket,
-    "?write@ClientboundMapItemDataPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &ClientboundMapItemDataPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(DimensionType{this->mDimension});
     return origin(stream);
@@ -259,9 +271,9 @@ LL_TYPE_INSTANCE_HOOK(
     RemoveVolumeEntityPacketHook,
     HookPriority::Normal,
     RemoveVolumeEntityPacket,
-    "?write@RemoveVolumeEntityPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &RemoveVolumeEntityPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionType);
     return origin(stream);
@@ -290,16 +302,23 @@ LL_TYPE_INSTANCE_HOOK(
     DIM_ID_MODIRY(DimensionType{this->mVanillaDimensionId});
     return origin(stream);
 }
-LL_TYPE_INSTANCE_HOOK(CacheHook, HookPriority::Normal, ClientBlobCache::Server::ActiveTransfersManager, &ClientBlobCache::Server::ActiveTransfersManager::isCacheEnabledFor, bool, ::NetworkIdentifier const&) {
-    return false;
+LL_TYPE_INSTANCE_HOOK(
+    CacheHook,
+    HookPriority::Normal,
+    ClientBlobCache::Server::ActiveTransfersManager,
+    &ClientBlobCache::Server::ActiveTransfersManager::enableCacheFor,
+    void,
+    ::NetworkIdentifier const&
+) {
+    return;
 }
 LL_TYPE_INSTANCE_HOOK(
     LevelChunkPacketHook,
     HookPriority::Normal,
     LevelChunkPacket,
-    "?write@LevelChunkPacket@@UEBAXAEAVBinaryStream@@@Z"_sym,
+    &LevelChunkPacket::$write,
     void,
-    BinaryStream const& stream
+    BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionId);
     this->mCacheEnabled = false;
