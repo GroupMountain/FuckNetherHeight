@@ -85,7 +85,7 @@ LoadingScreenIdManager* manager = nullptr;
 
 void fakeChangeDimension(Player& player) {
     PlayerFogPacket().sendTo(player);
-    gmlib::network::GMBinaryStream binaryStream;
+    gmlib::GMBinaryStream binaryStream;
     binaryStream.writePacketHeader(MinecraftPacketIds::ChangeDimension);
     binaryStream.writeVarInt(VanillaDimensions::Overworld().id);
     binaryStream.writeVec3(player.getPosition());
