@@ -14,7 +14,7 @@
     },
     "asset_url": "https://github.com/GroupMountain/FuckNetherHeight/releases/download/v0.13.4/FuckNetherHeight-windows-x64.zip",
     "prerequisites": {
-        "github.com/LiteLDev/LeviLamina": ">=1.0.0",
+        "github.com/LiteLDev/LeviLamina": ">=1.1.0",
         "github.com/GroupMountain/GMLIB": ">=1.0.0"
     },
     "files": {
