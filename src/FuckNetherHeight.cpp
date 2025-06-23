@@ -173,7 +173,7 @@ LL_TYPE_INSTANCE_HOOK(
     SubChunkRequestPacket&   pkt
 ) {
     pkt.mDimensionType =
-        ll::service::getServerNetworkHandler()->_getServerPlayer(id, pkt.mClientSubId)->getDimensionId();
+        ll::service::getServerNetworkHandler()->_getServerPlayer(id, pkt.mSenderSubId)->getDimensionId();
     return origin(id, pkt);
 }
 
