@@ -81,9 +81,7 @@ void sendEmptyChunks(Player& player, int radius, bool forceUpdate) {
     }
 }
 
-LoadingScreenIdManager* manager = nullptr;
-
-void fakeChangeDimension(Player& player) {
+void fakeChangeDimension(Player& player, uint screedId) {
     PlayerFogPacket().sendTo(player);
     gmlib::GMBinaryStream binaryStream;
     binaryStream.writePacketHeader(MinecraftPacketIds::ChangeDimension);
@@ -91,7 +89,7 @@ void fakeChangeDimension(Player& player) {
     binaryStream.writeVec3(player.getPosition());
     binaryStream.writeBool(true);
     binaryStream.writeBool(true);
-    binaryStream.writeUnsignedInt(manager->mUnk7db596.as<uint>()++);
+    binaryStream.writeUnsignedInt(screedId);
     binaryStream.sendTo(player.getNetworkIdentifier());
     PlayerActionPacket acp;
     acp.mAction    = PlayerActionType::ChangeDimensionAck;
@@ -100,31 +98,6 @@ void fakeChangeDimension(Player& player) {
     sendEmptyChunks(player, 3, true);
 }
 } // namespace dimension_utils
-
-LL_TYPE_INSTANCE_HOOK(
-    PlayerDimensionTransfererCtorHook,
-    HookPriority::Normal,
-    PlayerDimensionTransferer,
-    &PlayerDimensionTransferer::$ctor,
-    void*,
-    ::std::unique_ptr<::IPlayerDimensionTransferProxy>   playerDimensionTransferProxy,
-    bool                                                 isClientSide,
-    ::Bedrock::NotNullNonOwnerPtr<::PortalForcer>        portalForcer,
-    ::std::unique_ptr<::ISharedSpawnGetter>              sharedSpawnGetter,
-    ::Bedrock::NonOwnerPointer<::LevelStorage>           levelStorage,
-    ::Bedrock::NonOwnerPointer<::LoadingScreenIdManager> loadingScreenIdManager
-) {
-    dimension_utils::manager = loadingScreenIdManager;
-    return origin(
-        std::move(playerDimensionTransferProxy),
-        isClientSide,
-        portalForcer,
-        std::move(sharedSpawnGetter),
-        levelStorage,
-        loadingScreenIdManager
-    );
-}
-
 
 #define DIM_ID_MODIRY(name, ...)                                                                                       \
     if (name == VanillaDimensions::Nether()) {                                                                         \
@@ -172,8 +145,7 @@ LL_TYPE_INSTANCE_HOOK(
     NetworkIdentifier const& id,
     SubChunkRequestPacket&   pkt
 ) {
-    pkt.mDimensionType =
-        ll::service::getServerNetworkHandler()->_getServerPlayer(id, pkt.mSenderSubId)->getDimensionId();
+    pkt.mDimensionType = thisFor<NetEventCallback>()->_getServerPlayer(id, pkt.mSenderSubId)->getDimensionId();
     return origin(id, pkt);
 }
 
@@ -225,7 +197,10 @@ LL_TYPE_INSTANCE_HOOK(
     auto fromId = player.getDimensionId();
     if ((fromId.id == 1 && changeRequest.mToDimensionId->id == 2)
         || (fromId.id == 2 && changeRequest.mToDimensionId->id == 1)) {
-        dimension_utils::fakeChangeDimension(player);
+        dimension_utils::fakeChangeDimension(
+            player,
+            ++ll::memory::dAccess<LoadingScreenIdManager*>(&this->mLoadingScreenIdManager, 8)->mUnk7db596.as<uint>()
+        );
     }
     return origin(player, std::move(changeRequest));
 }
@@ -263,7 +238,7 @@ LL_TYPE_INSTANCE_HOOK(
     void,
     BinaryStream& stream
 ) {
-    DIM_ID_MODIRY(DimensionType{this->mDimension});
+    DIM_ID_MODIRY(this->mDimension);
     return origin(stream);
 }
 
@@ -299,7 +274,7 @@ LL_TYPE_INSTANCE_HOOK(
     void,
     BinaryStream const& stream
 ) {
-    DIM_ID_MODIRY(DimensionType{this->mVanillaDimensionId});
+    DIM_ID_MODIRY(*this->mVanillaDimensionId);
     return origin(stream);
 }
 LL_TYPE_INSTANCE_HOOK(
@@ -340,7 +315,6 @@ struct Impl {
         SetSpawnPositionPacketHook,
         SpawnParticleEffectPacketHook,
         LevelChunkPacketHook,
-        PlayerDimensionTransfererCtorHook,
         CacheHook,
         SubchunkPacketCtorHook>
         hook;
