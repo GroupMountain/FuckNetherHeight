@@ -1,9 +1,11 @@
+#pragma once
+
 #include <span> // temporarily fix the workflows build
 
 #include <ll/api/mod/NativeMod.h>
 #include <ll/api/mod/RegisterHelper.h>
 
-namespace FuckNetherHeight {
+    namespace FuckNetherHeight {
 
 class Entry {
 

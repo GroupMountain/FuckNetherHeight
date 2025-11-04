@@ -35,7 +35,7 @@
 #include "mc/world/level/dimension/DimensionHeightRange.h"
 #include "mc/world/level/dimension/VanillaDimensions.h"
 
-
+#include "gmlib/mc/network/BinaryStream.h"
 namespace dimension_utils {
 // reference:
 // https://github.com/LiteLDev/MoreDimensions/blob/e71fd553f05e71ce2282a1f4baae1774f36431b3/src/more_dimensions/core/dimension/FakeDimensionId.cpp#L65
@@ -54,7 +54,7 @@ static void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunk
     levelChunkPacket.mPos->x         = chunkX;
     levelChunkPacket.mPos->z         = chunkZ;
     levelChunkPacket.mDimensionId    = VanillaDimensions::Overworld();
-    levelChunkPacket.mCacheEnabled   = false;
+
     levelChunkPacket.mSubChunksCount = 0;
 
     levelChunkPacket.sendToClient(netId, SubClientId::PrimaryClient);
@@ -169,7 +169,6 @@ LL_TYPE_INSTANCE_HOOK(
     void,
     BinaryStream& stream
 ) {
-    this->mCacheEnabled = false;
     return origin(stream);
 }
 
@@ -274,19 +273,10 @@ LL_TYPE_INSTANCE_HOOK(
     void,
     BinaryStream const& stream
 ) {
-    DIM_ID_MODIRY(*this->mVanillaDimensionId);
+    DIM_ID_MODIRY(this->mVanillaDimensionId);
     return origin(stream);
 }
-LL_TYPE_INSTANCE_HOOK(
-    CacheHook,
-    HookPriority::Normal,
-    ClientBlobCache::Server::ActiveTransfersManager,
-    &ClientBlobCache::Server::ActiveTransfersManager::enableCacheFor,
-    void,
-    ::NetworkIdentifier const&
-) {
-    return;
-}
+
 LL_TYPE_INSTANCE_HOOK(
     LevelChunkPacketHook,
     HookPriority::Normal,
@@ -295,8 +285,7 @@ LL_TYPE_INSTANCE_HOOK(
     void,
     BinaryStream& stream
 ) {
-    DIM_ID_MODIRY(*this->mDimensionId);
-    this->mCacheEnabled = false;
+    DIM_ID_MODIRY(*this->mDimensionId)
     return origin(stream);
 }
 
@@ -315,7 +304,6 @@ struct Impl {
         SetSpawnPositionPacketHook,
         SpawnParticleEffectPacketHook,
         LevelChunkPacketHook,
-        CacheHook,
         SubchunkPacketCtorHook>
         hook;
 };
