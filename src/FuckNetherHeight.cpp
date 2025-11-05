@@ -42,69 +42,6 @@
 #include "mc/world/level/dimension/DimensionHeightRange.h" // IWYU pragma: keep
 #include "mc/world/level/dimension/VanillaDimensions.h"
 
-
-// namespace dimension_utils {
-// // reference:
-// //
-// https://github.com/LiteLDev/MoreDimensions/blob/e71fd553f05e71ce2282a1f4baae1774f36431b3/src/more_dimensions/core/dimension/FakeDimensionId.cpp#L65
-// static void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunkZ, bool forceUpdate) {
-//     std::array<uchar, 4096> biome{};
-//     LevelChunkPacket        levelChunkPacket;
-//     BinaryStream            binaryStream{levelChunkPacket.mSerializedChunk, false};
-//     VarIntDataOutput        varIntDataOutput(binaryStream);
-
-//     varIntDataOutput.writeBytes(&biome, 4096); // write void biome
-//     for (int i = 1; i <= 8; i++) {
-//         varIntDataOutput.writeByte(255ui8);
-//     }
-//     varIntDataOutput.mStream.writeByte(0, "Byte", 0); // write border blocks
-
-//     levelChunkPacket.mPos->x         = chunkX;
-//     levelChunkPacket.mPos->z         = chunkZ;
-//     levelChunkPacket.mDimensionId    = VanillaDimensions::Overworld();
-//     levelChunkPacket.mCacheEnabled   = false;
-//     levelChunkPacket.mSubChunksCount = 0;
-
-//     levelChunkPacket.sendToClient(netId, SubClientId::PrimaryClient);
-
-//     if (forceUpdate) {
-//         NetworkBlockPosition pos{
-//             BlockPos{chunkX << 4, 80, chunkZ << 4}
-//         };
-//         UpdateBlockPacket blockPacket;
-//         blockPacket.mPos         = pos;
-//         blockPacket.mLayer       = 0;
-//         blockPacket.mUpdateFlags = 1;
-//         blockPacket.sendToClient(netId, SubClientId::PrimaryClient);
-//     }
-// }
-
-// void sendEmptyChunks(Player& player, int radius, bool forceUpdate) {
-//     int chunkX = (int)(player.getPosition().x) >> 4;
-//     int chunkZ = (int)(player.getPosition().z) >> 4;
-//     for (int x = -radius; x <= radius; x++) {
-//         for (int z = -radius; z <= radius; z++) {
-//             sendEmptyChunk(player.getNetworkIdentifier(), chunkX + x, chunkZ + z, forceUpdate);
-//         }
-//     }
-// }
-
-// void fakeChangeDimension(Player& player, uint screenId) {
-//     PlayerFogPacket().sendTo(player);
-//     ChangeDimensionPacket cdp;
-//     cdp.mDimensionId             = VanillaDimensions::Overworld();
-//     cdp.mPos                     = player.getPosition();
-//     cdp.mRespawn                 = true;
-//     cdp.mLoadingScreenId->mValue = screenId;
-//     cdp.sendTo(player);
-//     PlayerActionPacket acp;
-//     acp.mAction    = PlayerActionType::ChangeDimensionAck;
-//     acp.mRuntimeId = player.getRuntimeID();
-//     acp.sendTo(player);
-//     sendEmptyChunks(player, 3, true);
-// }
-// } // namespace dimension_utils
-
 #define DIM_ID_MODIRY(name, ...)                                                                                       \
     if (name == VanillaDimensions::Nether()) {                                                                         \
         name = (decltype(name))VanillaDimensions::TheEnd();                                                            \
@@ -239,7 +176,6 @@ LL_TYPE_INSTANCE_HOOK(
     BinaryStream& stream
 ) {
     DIM_ID_MODIRY(*this->mDimensionId);
-    this->mCacheEnabled = false;
     return origin(stream);
 }
 LL_TYPE_INSTANCE_HOOK(
