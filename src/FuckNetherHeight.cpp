@@ -43,68 +43,67 @@
 #include "mc/world/level/dimension/VanillaDimensions.h"
 
 
-namespace dimension_utils {
-// reference:
+// namespace dimension_utils {
+// // reference:
+// //
 // https://github.com/LiteLDev/MoreDimensions/blob/e71fd553f05e71ce2282a1f4baae1774f36431b3/src/more_dimensions/core/dimension/FakeDimensionId.cpp#L65
-static void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunkZ, bool forceUpdate) {
-    std::array<uchar, 4096> biome{};
-    LevelChunkPacket        levelChunkPacket;
-    BinaryStream            binaryStream{levelChunkPacket.mSerializedChunk, false};
-    VarIntDataOutput        varIntDataOutput(binaryStream);
+// static void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunkZ, bool forceUpdate) {
+//     std::array<uchar, 4096> biome{};
+//     LevelChunkPacket        levelChunkPacket;
+//     BinaryStream            binaryStream{levelChunkPacket.mSerializedChunk, false};
+//     VarIntDataOutput        varIntDataOutput(binaryStream);
 
-    varIntDataOutput.writeBytes(&biome, 4096); // write void biome
-    for (int i = 1; i <= 8; i++) {
-        varIntDataOutput.writeByte(255ui8);
-    }
-    varIntDataOutput.mStream.writeByte(0, "Byte", 0); // write border blocks
+//     varIntDataOutput.writeBytes(&biome, 4096); // write void biome
+//     for (int i = 1; i <= 8; i++) {
+//         varIntDataOutput.writeByte(255ui8);
+//     }
+//     varIntDataOutput.mStream.writeByte(0, "Byte", 0); // write border blocks
 
-    levelChunkPacket.mPos->x         = chunkX;
-    levelChunkPacket.mPos->z         = chunkZ;
-    levelChunkPacket.mDimensionId    = VanillaDimensions::Overworld();
-    levelChunkPacket.mCacheEnabled   = false;
-    levelChunkPacket.mSubChunksCount = 0;
+//     levelChunkPacket.mPos->x         = chunkX;
+//     levelChunkPacket.mPos->z         = chunkZ;
+//     levelChunkPacket.mDimensionId    = VanillaDimensions::Overworld();
+//     levelChunkPacket.mCacheEnabled   = false;
+//     levelChunkPacket.mSubChunksCount = 0;
 
-    levelChunkPacket.sendToClient(netId, SubClientId::PrimaryClient);
+//     levelChunkPacket.sendToClient(netId, SubClientId::PrimaryClient);
 
-    if (forceUpdate) {
-        NetworkBlockPosition pos{
-            BlockPos{chunkX << 4, 80, chunkZ << 4}
-        };
-        UpdateBlockPacket blockPacket;
-        blockPacket.mPos         = pos;
-        blockPacket.mLayer       = 0;
-        blockPacket.mUpdateFlags = 1;
-        blockPacket.sendToClient(netId, SubClientId::PrimaryClient);
-    }
-}
+//     if (forceUpdate) {
+//         NetworkBlockPosition pos{
+//             BlockPos{chunkX << 4, 80, chunkZ << 4}
+//         };
+//         UpdateBlockPacket blockPacket;
+//         blockPacket.mPos         = pos;
+//         blockPacket.mLayer       = 0;
+//         blockPacket.mUpdateFlags = 1;
+//         blockPacket.sendToClient(netId, SubClientId::PrimaryClient);
+//     }
+// }
 
-void sendEmptyChunks(Player& player, int radius, bool forceUpdate) {
-    int chunkX = (int)(player.getPosition().x) >> 4;
-    int chunkZ = (int)(player.getPosition().z) >> 4;
-    for (int x = -radius; x <= radius; x++) {
-        for (int z = -radius; z <= radius; z++) {
-            sendEmptyChunk(player.getNetworkIdentifier(), chunkX + x, chunkZ + z, forceUpdate);
-        }
-    }
-}
+// void sendEmptyChunks(Player& player, int radius, bool forceUpdate) {
+//     int chunkX = (int)(player.getPosition().x) >> 4;
+//     int chunkZ = (int)(player.getPosition().z) >> 4;
+//     for (int x = -radius; x <= radius; x++) {
+//         for (int z = -radius; z <= radius; z++) {
+//             sendEmptyChunk(player.getNetworkIdentifier(), chunkX + x, chunkZ + z, forceUpdate);
+//         }
+//     }
+// }
 
-void fakeChangeDimension(Player& player, uint screenId) {
-    PlayerFogPacket().sendTo(player);
-    BinaryStream                 binaryStream;
-    ChangeDimensionPacketPayload a;
-    ChangeDimensionPacket        cdp;
-    cdp.mDimensionId             = VanillaDimensions::Overworld();
-    cdp.mPos                     = player.getPosition();
-    cdp.mRespawn                 = true;
-    cdp.mLoadingScreenId->mValue = screenId;
-    cdp.sendTo(player);
-    PlayerActionPacket acp;
-    acp.mAction    = PlayerActionType::ChangeDimensionAck;
-    acp.mRuntimeId = player.getRuntimeID();
-    acp.sendTo(player);
-    sendEmptyChunks(player, 3, true);
-}
-} // namespace dimension_utils
+// void fakeChangeDimension(Player& player, uint screenId) {
+//     PlayerFogPacket().sendTo(player);
+//     ChangeDimensionPacket cdp;
+//     cdp.mDimensionId             = VanillaDimensions::Overworld();
+//     cdp.mPos                     = player.getPosition();
+//     cdp.mRespawn                 = true;
+//     cdp.mLoadingScreenId->mValue = screenId;
+//     cdp.sendTo(player);
+//     PlayerActionPacket acp;
+//     acp.mAction    = PlayerActionType::ChangeDimensionAck;
+//     acp.mRuntimeId = player.getRuntimeID();
+//     acp.sendTo(player);
+//     sendEmptyChunks(player, 3, true);
+// }
+// } // namespace dimension_utils
 
 #define DIM_ID_MODIRY(name, ...)                                                                                       \
     if (name == VanillaDimensions::Nether()) {                                                                         \
@@ -252,13 +251,33 @@ LL_TYPE_INSTANCE_HOOK(
     Player&                  player,
     ChangeDimensionRequest&& changeRequest
 ) {
-    auto fromId = player.getDimensionId();
-    if ((fromId.id == 1 && changeRequest.mToDimensionId->id == 2)
-        || (fromId.id == 2 && changeRequest.mToDimensionId->id == 1)) {
-        dimension_utils::fakeChangeDimension(player, ++this->mLoadingScreenIdManager->mValue->mUnk7db596.as<uint>());
+    if (player.getDimensionId() != VanillaDimensions::Nether()) {
+        return origin(player, std::move(changeRequest));
     }
-    return origin(player, std::move(changeRequest));
+    ChangeDimensionRequest request0{
+        changeRequest.mState,
+        changeRequest.mFromDimensionId,
+        VanillaDimensions::Overworld(),
+        changeRequest.mFromLocation,
+        changeRequest.mToLocation,
+        false,
+        changeRequest.mRespawn,
+        changeRequest.mAgentTag ? changeRequest.mAgentTag->clone() : nullptr,
+    };
+    origin(player, std::move(request0));
+    ChangeDimensionRequest request1{
+        changeRequest.mState,
+        VanillaDimensions::Overworld(),
+        changeRequest.mToDimensionId,
+        changeRequest.mFromLocation,
+        changeRequest.mToLocation,
+        changeRequest.mUsePortal,
+        changeRequest.mRespawn,
+        changeRequest.mAgentTag ? changeRequest.mAgentTag->clone() : nullptr,
+    };
+    origin(player, std::move(request1));
 }
+ChangeDimensionRequest::~ChangeDimensionRequest() = default;
 
 
 struct Impl {
