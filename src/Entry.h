@@ -1,4 +1,4 @@
-#include <span> // temporarily fix the workflows build
+#pragma once
 
 #include <ll/api/mod/NativeMod.h>
 #include <ll/api/mod/RegisterHelper.h>

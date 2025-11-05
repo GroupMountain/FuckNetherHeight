@@ -5,17 +5,6 @@ Diagnostics:
     - "-Wc++2b-extensions"
     - "-Wmicrosoft-cast"
     - "-Wcxx20_deducing_this"
-    - "-Wundefined_internal_type"
-    - "-Wincomplete_member_access"
-    - "-Wsizeof_alignof_incomplete_or_sizeless_type"
-    - "-Wexplicit_spec_non_template"
-    - "-Wundeclared_var_use"
-    - "-Wno_member"
-    - "-Wovl_no_viable_function_in_init"
-    - "-Wunknown_typename"
-    - "-Wqualified_param_declarator"
-    - "-Wtrailing_return_without_auto"
-    - "-Wexpected"
 CompileFlags:
   Add:
     - "-Xclang"

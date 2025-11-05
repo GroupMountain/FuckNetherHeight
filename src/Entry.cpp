@@ -1,4 +1,5 @@
 #include "Global.h"
+#include "ll/api/service/GamingStatus.h"
 
 namespace FuckNetherHeight {
 

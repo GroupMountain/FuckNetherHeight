@@ -4,10 +4,5 @@
     "version": "${modVersion}",
     "type": "native",
     "description": "Fuck Vanilla Bedrock Edition Nether Height Limit",
-    "author": "GroupMountain",
-    "dependencies": [
-        {
-            "name": "GMLIB"
-        }
-    ]
+    "author": "GroupMountain"
 }
