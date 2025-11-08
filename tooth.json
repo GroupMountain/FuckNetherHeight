@@ -1,7 +1,7 @@
 {
     "format_version": 2,
     "tooth": "github.com/GroupMountain/FuckNetherHeight",
-    "version": "0.14.0",
+    "version": "0.17.0",
     "info": {
         "name": "FuckNetherHeight",
         "description": "Fuck Vinalla Bedrock Edition Nether Height Limit",
@@ -14,8 +14,7 @@
     },
     "asset_url": "https://github.com/GroupMountain/FuckNetherHeight/releases/download/v$(version)/FuckNetherHeight-windows-x64.zip",
     "prerequisites": {
-        "github.com/LiteLDev/LeviLamina": ">=1.4.0",
-        "github.com/GroupMountain/GMLIB": ">=1.4.0"
+        "github.com/LiteLDev/LeviLamina": ">=1.7.0"
     },
     "files": {
         "place": [
