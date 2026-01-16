@@ -72,10 +72,6 @@ jobs:
           name: ${{ github.event.repository.name }}-windows-client-x64-${{ github.sha }}
           path: artifact-client
 
-      - name: Copy additional files
-        run: |
-          cp -v LICENSE README.md artifact/
-
       - name: Archive server
         run: |
           zip -r ../${{ github.event.repository.name }}-windows-server-x64.zip *
@@ -85,6 +81,11 @@ jobs:
         run: |
           zip -r ../${{ github.event.repository.name }}-windows-client-x64.zip *
         working-directory: artifact-client
+
+      - name: Copy additional files
+        run: |
+          cp -v LICENSE README.md artifact-server/
+          cp -v LICENSE README.md artifact-client/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
