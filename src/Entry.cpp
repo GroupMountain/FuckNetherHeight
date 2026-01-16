@@ -11,7 +11,7 @@ Entry& Entry::getInstance() {
 bool Entry::load() {
 #ifdef LL_PLAT_S
     if (ll::getGamingStatus() != ll::GamingStatus::Starting) {
-        logger.error("FuckNetherHeight must be loaded at startup!");
+        getSelf().getLogger().error("FuckNetherHeight must be loaded at startup!");
         return false;
     }
 #endif
