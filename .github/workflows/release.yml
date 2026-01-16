@@ -4,7 +4,7 @@ on:
       - published
   
 jobs:
-  build:
+  build-server:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -16,20 +16,43 @@ jobs:
           xmake repo -u
 
       - run: |
-          xmake f -a x64 -m release -p windows -v -y
+          xmake f -a x64 -m release -p windows -v -y --build_type=server
 
       - run: |
           xmake -w -y
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.repository.name }}-windows-x64-${{ github.sha }}
+          name: ${{ github.event.repository.name }}-windows-server-x64-${{ github.sha }}
+          path: |
+            bin/
+  build-client:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - uses: xmake-io/github-action-setup-xmake@v1
+      
+      - run: |
+          xmake repo -u
+
+      - run: |
+          xmake f -a x64 -m release -p windows -v -y --build_type=client
+
+      - run: |
+          xmake -w -y
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-windows-client-x64-${{ github.sha }}
           path: |
             bin/
 
   upload-to-release:
     needs:
-      - build
+      - build-server
+      - build-client
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -37,23 +60,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download Mod
+      - name: Download server
         uses: actions/download-artifact@v4
         with:
-          name: ${{ github.event.repository.name }}-windows-x64-${{ github.sha }}
-          path: artifact
+          name: ${{ github.event.repository.name }}-windows-server-x64-${{ github.sha }}
+          path: artifact-server
+
+      - name: Download client
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-windows-client-x64-${{ github.sha }}
+          path: artifact-client
 
       - name: Copy additional files
         run: |
           cp -v LICENSE README.md artifact/
 
-      - name: Archive release
+      - name: Archive server
         run: |
-          zip -r ../${{ github.event.repository.name }}-windows-x64.zip *
-        working-directory: artifact
+          zip -r ../${{ github.event.repository.name }}-windows-server-x64.zip *
+        working-directory: artifact-server
+      
+      - name: Archive client
+        run: |
+          zip -r ../${{ github.event.repository.name }}-windows-client-x64.zip *
+        working-directory: artifact-client
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ${{ github.event.repository.name }}-windows-x64.zip
+            ${{ github.event.repository.name }}-windows-server-x64.zip
+            ${{ github.event.repository.name }}-windows-client-x64.zip
