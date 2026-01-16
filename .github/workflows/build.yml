@@ -16,7 +16,7 @@ jobs:
           xmake repo -u
 
       - run: |
-          xmake f -a x64 -m release -p windows -v -y --build_type=server
+          xmake f -a x64 -m release -p windows -v -y --target_type=server
 
       - run: |
           xmake -w -y
@@ -28,7 +28,7 @@ jobs:
             bin/
       
       - run: |
-          xmake f -a x64 -m release -p windows -v -y --build_type=client
+          xmake f -a x64 -m release -p windows -v -y --target_type=client
 
       - run: |
           xmake -w -y
