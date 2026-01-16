@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Hooks.h"
 #include <ll/api/mod/NativeMod.h>
 #include <ll/api/mod/RegisterHelper.h>
 
@@ -10,9 +11,9 @@ class Entry {
 public:
     static Entry& getInstance();
 
-    Entry() : mSelf(ll::mod::NativeMod::current()) {}
+    Entry() : mSelf(*ll::mod::NativeMod::current()), mHooks(FuckNetherHeightHooks::getInstance()) {}
 
-    [[nodiscard]] ll::mod::NativeMod& getSelf() const { return *mSelf; }
+    [[nodiscard]] ll::mod::NativeMod& getSelf() const { return mSelf; }
 
     bool load();
 
@@ -21,7 +22,8 @@ public:
     bool disable();
 
 private:
-    std::shared_ptr<ll::mod::NativeMod> mSelf;
+    ll::mod::NativeMod&    mSelf;
+    FuckNetherHeightHooks& mHooks;
 };
 
 } // namespace FuckNetherHeight

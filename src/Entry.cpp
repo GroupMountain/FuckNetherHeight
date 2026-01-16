@@ -1,5 +1,5 @@
-#include "Global.h"
-#include "ll/api/service/GamingStatus.h"
+#include "Entry.h"
+#include "ll/api/service/GamingStatus.h" // IWYU pragma: keep
 
 namespace FuckNetherHeight {
 
@@ -9,25 +9,23 @@ Entry& Entry::getInstance() {
 }
 
 bool Entry::load() {
+#ifdef LL_PLAT_S
     if (ll::getGamingStatus() != ll::GamingStatus::Starting) {
         logger.error("FuckNetherHeight must be loaded at startup!");
         return false;
     }
-    enableMod();
+#endif
     return true;
 }
 
 bool Entry::enable() {
-    logger.info("FuckNetherHeight Loaded!");
-    logger.info("Author: GroupMountain");
-    logger.info("Repository: https://github.com/GroupMountain/FuckNetherHeight");
+    getSelf().getLogger().info("FuckNetherHeight Loaded!");
+    getSelf().getLogger().info("Author: GroupMountain");
+    getSelf().getLogger().info("Repository: https://github.com/GroupMountain/FuckNetherHeight");
     return true;
 }
 
-bool Entry::disable() {
-    disableMod();
-    return true;
-}
+bool Entry::disable() { return true; }
 
 } // namespace FuckNetherHeight
 
