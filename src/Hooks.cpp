@@ -144,7 +144,7 @@ void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunkZ, bool
 
     levelChunkPacket.mPos->x         = chunkX;
     levelChunkPacket.mPos->z         = chunkZ;
-    levelChunkPacket.mDimensionId    = VanillaDimensions::TheEnd();
+    levelChunkPacket.mDimensionId    = VanillaDimensions::Overworld();
     levelChunkPacket.mCacheEnabled   = false;
     levelChunkPacket.mSubChunksCount = 0;
 
