@@ -243,20 +243,80 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     }
     return origin(player, std::move(changeRequest));
 }
-#ifdef LL_PLAT_S
-LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
-    PropertiesSettingsCtorHook,
+LL_TYPE_INSTANCE_HOOK(
+    LevelInitializeHook,
     HookPriority::Normal,
-    PropertiesSettings,
-    &PropertiesSettings::$ctor,
-    void*,
-    std::string const& filename
+    Level,
+    &Level::$initialize,
+    bool,
+    std::string const&   levelName,
+    LevelSettings const& levelSettings,
+    Experiments const&   experiments,
+    std::string const*   levelId,
+    std::optional<std::reference_wrapper<
+        std::unordered_map<std::string, std::unique_ptr<::BiomeJsonDocumentGlue::ResolvedBiomeData>>>>
+        biomeIdToResolvedData
 ) {
-    auto res                                                                 = origin(filename);
-    reinterpret_cast<PropertiesSettings*>(res)->mClientSideGenerationEnabled = false;
-    return res;
+    mClientSideChunkGenEnabled = false;
+    return origin(levelName, levelSettings, experiments, levelId, biomeIdToResolvedData);
 }
-#endif
+LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
+    StartGamePacketCtorHook,
+    HookPriority::Normal,
+    StartGamePacket,
+    &StartGamePacket::$ctor,
+    void*,
+    ::LevelSettings const&          settings,
+    ::ActorUniqueID                 entityId,
+    ::ActorRuntimeID                runtimeId,
+    ::GameType                      entityGameType,
+    bool                            enableItemStackNetManager,
+    ::Vec3 const&                   pos,
+    ::Vec2 const&                   rot,
+    ::std::string const&            levelId,
+    ::std::string const&            levelName,
+    ::ContentIdentity const&        premiumTemplateContentIdentity,
+    ::std::string const&            multiplayerCorrelationId,
+    ::BlockDefinitionGroup const&   blockDefinitionGroup,
+    bool                            isTrial,
+    ::CompoundTag                   playerPropertyData,
+    ::PlayerMovementSettings const& movementSettings,
+    bool                            enableTickDeathSystems,
+    ::std::string const&            serverVersion,
+    ::mce::UUID const&              worldTemplateId,
+    uint64                          levelCurrentTime,
+    int                             enchantmentSeed,
+    uint64                          blockTypeRegistryChecksum
+) {
+    if (settings.mSpawnSettings->dimension == VanillaDimensions::Nether()) {
+        const_cast<ll::TypedStorage<sizeof(DimensionType), alignof(DimensionType), ::DimensionType>&>(
+            settings.mSpawnSettings->dimension
+        ) = VanillaDimensions::TheEnd();
+    }
+    return origin(
+        settings,
+        entityId,
+        runtimeId,
+        entityGameType,
+        enableItemStackNetManager,
+        pos,
+        rot,
+        levelId,
+        levelName,
+        premiumTemplateContentIdentity,
+        multiplayerCorrelationId,
+        blockDefinitionGroup,
+        isTrial,
+        playerPropertyData,
+        movementSettings,
+        enableTickDeathSystems,
+        serverVersion,
+        worldTemplateId,
+        levelCurrentTime,
+        enchantmentSeed,
+        blockTypeRegistryChecksum
+    );
+}
 } // namespace
 
 struct FuckNetherHeightHooks::Impl {
@@ -267,12 +327,9 @@ struct FuckNetherHeightHooks::Impl {
         DimensionCtorHook,
         BuildSubChunkPacketDataHook,
         SpawnParticleEffectPacketCtorHook,
-        RequestPlayerChangeDimensionHook
-#ifdef LL_PLAT_S
-        ,
-        PropertiesSettingsCtorHook
-#endif
-        >
+        RequestPlayerChangeDimensionHook,
+        StartGamePacketCtorHook,
+        LevelInitializeHook>
         hooks;
 };
 FuckNetherHeightHooks::FuckNetherHeightHooks() : pImpl(std::make_unique<Impl>()) {}
