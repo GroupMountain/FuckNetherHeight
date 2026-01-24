@@ -243,7 +243,7 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     }
     return origin(player, std::move(changeRequest));
 }
-LL_TYPE_INSTANCE_HOOK(
+LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     LevelInitializeHook,
     HookPriority::Normal,
     Level,
@@ -260,6 +260,20 @@ LL_TYPE_INSTANCE_HOOK(
     mClientSideChunkGenEnabled = false;
     return origin(levelName, levelSettings, experiments, levelId, biomeIdToResolvedData);
 }
+#ifdef LL_PLAT_S
+LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
+    PropertiesSettingsCtorHook,
+    HookPriority::Normal,
+    PropertiesSettings,
+    &PropertiesSettings::$ctor,
+    void*,
+    std::string const& filename
+) {
+    auto res                                                                 = origin(filename);
+    reinterpret_cast<PropertiesSettings*>(res)->mClientSideGenerationEnabled = false;
+    return res;
+}
+#endif
 LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     StartGamePacketCtorHook,
     HookPriority::Normal,
@@ -329,7 +343,12 @@ struct FuckNetherHeightHooks::Impl {
         SpawnParticleEffectPacketCtorHook,
         RequestPlayerChangeDimensionHook,
         StartGamePacketCtorHook,
-        LevelInitializeHook>
+        LevelInitializeHook
+#ifdef LL_PLAT_S
+        ,
+        PropertiesSettingsCtorHook
+#endif
+        >
         hooks;
 };
 FuckNetherHeightHooks::FuckNetherHeightHooks() : pImpl(std::make_unique<Impl>()) {}
