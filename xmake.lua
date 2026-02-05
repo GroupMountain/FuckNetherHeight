@@ -12,9 +12,9 @@ option_end()
 local is_server = is_config("target_type", "server")
 
 if is_server then
-    add_requires("levilamina v1.8.0-rc.1", {configs = {target_type = "server"}})
+    add_requires("levilamina v1.9.4", {configs = {target_type = "server"}})
 else
-    add_requires("levilamina v1.8.0-rc.1", {configs = {target_type = "client"}})
+    add_requires("levilamina v1.9.4", {configs = {target_type = "client"}})
 end
 
 add_requires("levibuildscript 0.5.2")

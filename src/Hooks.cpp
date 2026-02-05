@@ -295,7 +295,6 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     bool                            isTrial,
     ::CompoundTag                   playerPropertyData,
     ::PlayerMovementSettings const& movementSettings,
-    bool                            enableTickDeathSystems,
     ::std::string const&            serverVersion,
     ::mce::UUID const&              worldTemplateId,
     uint64                          levelCurrentTime,
@@ -323,7 +322,6 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
         isTrial,
         playerPropertyData,
         movementSettings,
-        enableTickDeathSystems,
         serverVersion,
         worldTemplateId,
         levelCurrentTime,
@@ -358,11 +356,4 @@ FuckNetherHeightHooks& FuckNetherHeightHooks::getInstance() {
     return hooks;
 }
 
-MolangVariableMap::MolangVariableMap(MolangVariableMap const& rhs) {
-    mMapFromVariableIndexToVariableArrayOffset = rhs.mMapFromVariableIndexToVariableArrayOffset;
-    mVariables                                 = {};
-    for (auto& ptr : *rhs.mVariables) {
-        mVariables->push_back(std::make_unique<MolangVariable>(*ptr));
-    }
-    mHasPublicVariables = rhs.mHasPublicVariables;
-}
+MolangScriptArg::MolangScriptArg() : mType(MolangScriptArgType::Float), mPOD() {}
