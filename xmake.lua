@@ -12,12 +12,12 @@ option_end()
 local is_server = is_config("target_type", "server")
 
 if is_server then
-    add_requires("levilamina v1.9.4", {configs = {target_type = "server"}})
+    add_requires("levilamina 26.10.5", {configs = {target_type = "server"}})
 else
-    add_requires("levilamina v1.9.4", {configs = {target_type = "client"}})
+    add_requires("levilamina 26.10.5", {configs = {target_type = "client"}})
 end
 
-add_requires("levibuildscript 0.5.2")
+add_requires("levibuildscript 0.6.0")
 
 if not has_config("vs_runtime") then
     set_runtimes("MD")

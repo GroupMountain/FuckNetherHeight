@@ -5,9 +5,10 @@
 #include "mc/deps/core/utility/BinaryStream.h"
 #include "mc/legacy/ActorRuntimeID.h"
 #include "mc/network//LoopbackPacketSender.h"
+#include  "mc/world/level/biome/glue/BiomeJsonDocumentGlue.h"
+#include "mc/world/level/biome/glue/BiomeJsonDocumentGlueResolvedBiomeData.h"
 #include "mc/network/LoopbackPacketSender.h"
 #include "mc/network/MinecraftPacketIds.h"
-#include "mc/network/NetworkBlockPosition.h"
 #include "mc/network/NetworkIdentifierWithSubId.h"
 #include "mc/network/ServerNetworkHandler.h"
 #include "mc/network/packet/AddVolumeEntityPacket.h"
@@ -151,9 +152,8 @@ void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunkZ, bool
     ll::service::getLevel()->getPacketSender()->sendToClient(netId, levelChunkPacket, SubClientId::PrimaryClient);
 
     if (forceUpdate) {
-        NetworkBlockPosition pos{
-            BlockPos{chunkX << 4, 80, chunkZ << 4}
-        };
+        BlockPos pos{chunkX << 4, 80, chunkZ << 4};
+
         UpdateBlockPacket blockPacket;
         blockPacket.mPos         = pos;
         blockPacket.mLayer       = 0;
@@ -254,7 +254,7 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     Experiments const&   experiments,
     std::string const*   levelId,
     std::optional<std::reference_wrapper<
-        std::unordered_map<std::string, std::unique_ptr<::BiomeJsonDocumentGlue::ResolvedBiomeData>>>>
+        std::unordered_map<std::string, std::unique_ptr<::BiomeJsonDocumentGlueResolvedBiomeData>>>>
         biomeIdToResolvedData
 ) {
     mClientSideChunkGenEnabled = false;
@@ -266,10 +266,10 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     HookPriority::Normal,
     PropertiesSettings,
     &PropertiesSettings::$ctor,
-    void*,
-    std::string const& filename
+    void*
+
 ) {
-    auto res                                                                 = origin(filename);
+    auto res                                                                 = origin();
     reinterpret_cast<PropertiesSettings*>(res)->mClientSideGenerationEnabled = false;
     return res;
 }
@@ -297,6 +297,8 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     ::PlayerMovementSettings const& movementSettings,
     ::std::string const&            serverVersion,
     ::mce::UUID const&              worldTemplateId,
+    ::std::optional<::ServerConfiguration::ServerConfigurationJoinInfo> const& serverJoinInfo,
+    ::Social::Events::ServerTelemetryData const&                               serverTelemetryData,
     uint64                          levelCurrentTime,
     int                             enchantmentSeed,
     uint64                          blockTypeRegistryChecksum
@@ -324,6 +326,8 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
         movementSettings,
         serverVersion,
         worldTemplateId,
+        serverJoinInfo,
+        serverTelemetryData,
         levelCurrentTime,
         enchantmentSeed,
         blockTypeRegistryChecksum
@@ -355,5 +359,6 @@ FuckNetherHeightHooks& FuckNetherHeightHooks::getInstance() {
     static FuckNetherHeightHooks hooks;
     return hooks;
 }
-
+#ifdef LL_PLAT_S
 MolangScriptArg::MolangScriptArg() : mType(MolangScriptArgType::Float), mPOD() {}
+#endif

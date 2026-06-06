@@ -1,95 +1,100 @@
+name: Release Build
+
 on:
   release:
     types:
       - published
-  
+
 jobs:
-  build-server:
+  build:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        target_type:
+          - server
+          - client
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
-      - uses: xmake-io/github-action-setup-xmake@v1
-      
-      - run: |
-          xmake repo -u
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
 
-      - run: |
-          xmake f -a x64 -m release -p windows -v -y --target_type=server
-
-      - run: |
-          xmake -w -y
-
-      - uses: actions/upload-artifact@v4
+      - name: Cache xmake packages
+        uses: actions/cache@v4
         with:
-          name: ${{ github.event.repository.name }}-windows-server-x64-${{ github.sha }}
           path: |
-            bin/
-  build-client:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+            ~/AppData/Local/.xmake
+          key: xmake-${{ hashFiles('xmake.lua') }}
+          restore-keys: |
+            xmake-
 
-      - uses: xmake-io/github-action-setup-xmake@v1
-      
-      - run: |
-          xmake repo -u
+      - name: Update repositories
+        run: xmake repo -u
 
-      - run: |
-          xmake f -a x64 -m release -p windows -v -y --target_type=client
+      - name: Configure project
+        run: xmake f -a x64 -m release -p windows --target_type=${{ matrix.target_type }} -y
 
-      - run: |
-          xmake -w -y
+      - name: Build project
+        run: xmake -w -y
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
         with:
-          name: ${{ github.event.repository.name }}-windows-client-x64-${{ github.sha }}
-          path: |
-            bin/
+          name: ${{ github.event.repository.name }}-${{ github.sha }}-${{ matrix.target_type }}-windows-x64
+          path: bin/
 
-  upload-to-release:
-    needs:
-      - build-server
-      - build-client
+  update-release-notes:
     permissions:
       contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Download server
-        uses: actions/download-artifact@v4
+      - name: Extract release notes
+        id: extract-release-notes
+        uses: ffurrer2/extract-release-notes@v3
+
+      - name: Update release body
+        uses: softprops/action-gh-release@v3
         with:
-          name: ${{ github.event.repository.name }}-windows-server-x64-${{ github.sha }}
-          path: artifact-server
+          body: |
+            ${{ steps.extract-release-notes.outputs.release_notes }}
 
-      - name: Download client
-        uses: actions/download-artifact@v4
+  upload-to-release:
+    needs:
+      - build
+      - update-release-notes
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        target_type:
+          - server
+          - client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
         with:
-          name: ${{ github.event.repository.name }}-windows-client-x64-${{ github.sha }}
-          path: artifact-client
-
-      - name: Archive server
-        run: |
-          zip -r ../${{ github.event.repository.name }}-windows-server-x64.zip *
-        working-directory: artifact-server
-      
-      - name: Archive client
-        run: |
-          zip -r ../${{ github.event.repository.name }}-windows-client-x64.zip *
-        working-directory: artifact-client
+          name: ${{ github.event.repository.name }}-${{ github.sha }}-${{ matrix.target_type }}-windows-x64
+          path: artifact
 
       - name: Copy additional files
         run: |
-          cp -v LICENSE README.md artifact-server/
-          cp -v LICENSE README.md artifact-client/
+          cp CHANGELOG.md LICENSE README.md artifact/ || true
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Archive release
+        run: |
+          cd artifact
+          zip -r ../${{ github.event.repository.name }}-windows-${{ matrix.target_type }}-x64.zip .
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v3
         with:
           files: |
-            ${{ github.event.repository.name }}-windows-server-x64.zip
-            ${{ github.event.repository.name }}-windows-client-x64.zip
+            ${{ github.event.repository.name }}-windows-${{ matrix.target_type }}-x64.zip
