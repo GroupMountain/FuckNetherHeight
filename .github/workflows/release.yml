@@ -52,10 +52,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Extract release notes
-        id: extract-release-notes
-        uses: ffurrer2/extract-release-notes@v3
-
       - name: Update release body
         uses: softprops/action-gh-release@v3
         with:
