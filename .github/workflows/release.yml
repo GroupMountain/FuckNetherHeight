@@ -44,23 +44,6 @@ jobs:
           name: ${{ github.event.repository.name }}-${{ github.sha }}-${{ matrix.target_type }}-windows-x64
           path: bin/
 
-  update-release-notes:
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Extract release notes
-        id: extract-release-notes
-        uses: ffurrer2/extract-release-notes@v3
-
-      - name: Update release body
-        uses: softprops/action-gh-release@v3
-        with:
-          body: |
-            ${{ steps.extract-release-notes.outputs.release_notes }}
 
   upload-to-release:
     needs:
