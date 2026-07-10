@@ -12,9 +12,9 @@ option_end()
 local is_server = is_config("target_type", "server")
 
 if is_server then
-    add_requires("levilamina 26.10.5", {configs = {target_type = "server"}})
+    add_requires("levilamina 26.20.0", {configs = {target_type = "server"}})
 else
-    add_requires("levilamina 26.10.5", {configs = {target_type = "client"}})
+    add_requires("levilamina 26.20.0", {configs = {target_type = "client"}})
 end
 
 add_requires("levibuildscript 0.6.0")
@@ -35,6 +35,13 @@ target("FuckNetherHeight")
     set_symbols("debug")
     add_files("src/**.cpp")
     add_includedirs("src")
+        after_build(function (target)
+
+            local dst = "D:/testserver/26/plugins/DeathMessage"
+            os.cp(target:targetfile(), dst)
+            print("[Mod Copier]: Already copied " .. target:filename() .. " → " .. dst)
+
+        end)
     if is_server then
         add_defines("LL_PLAT_S")
     else
