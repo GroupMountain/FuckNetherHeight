@@ -13,7 +13,6 @@
 #include "mc/network/ServerNetworkHandler.h"
 #include "mc/network/packet/AddVolumeEntityPacket.h"
 #include "mc/network/packet/ChangeDimensionPacket.h"
-#include "mc/network/packet/DebugDrawerPacket.h"
 #include "mc/network/packet/InteractPacket.h"
 #include "mc/network/packet/InventoryTransactionPacket.h"
 #include "mc/network/packet/LevelChunkPacket.h"
@@ -21,7 +20,6 @@
 #include "mc/network/packet/PlayerActionType.h"
 #include "mc/network/packet/PlayerAuthInputPacket.h"
 #include "mc/network/packet/RemoveVolumeEntityPacket.h"
-#include "mc/network/packet/ShapeDataPayload.h"
 #include "mc/network/packet/SpawnParticleEffectPacket.h"
 #include "mc/network/packet/StartGamePacket.h"
 #include "mc/network/packet/SubChunkPacket.h"
@@ -46,14 +44,14 @@ void patchPacket(MinecraftPacketIds id, Packet& packet) {
     switch (id) {
     case MinecraftPacketIds::RemoveVolumeEntityPacket: {
         auto& pk = (RemoveVolumeEntityPacket&)packet;
-        if (pk.mDimensionType == VanillaDimensions::Nether()) {
+        if (pk.mDimensionType->mValue == VanillaDimensions::Nether()) {
             pk.mDimensionType = VanillaDimensions::TheEnd();
         }
     }
     case MinecraftPacketIds::AddVolumeEntityPacket: {
         auto& pk = (AddVolumeEntityPacket&)packet;
-        if (pk.mDimensionType == VanillaDimensions::Nether()) {
-            pk.mDimensionType = VanillaDimensions::TheEnd();
+        if (pk.mDimensionType->mValue == VanillaDimensions::Nether()) {
+            pk.mDimensionType->mValue = VanillaDimensions::TheEnd();
         }
     }
     default:
@@ -76,8 +74,8 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     if (player && player->getDimensionId() == VanillaDimensions::Nether()
         && packet.getId() == MinecraftPacketIds::FullChunkData) {
         auto& pk = (LevelChunkPacket&)packet;
-        if (pk.mDimensionId == VanillaDimensions::Nether()) {
-            pk.mDimensionId = VanillaDimensions::TheEnd();
+        if (pk.mDimensionId->mValue == VanillaDimensions::Nether()) {
+            pk.mDimensionId->mValue = VanillaDimensions::TheEnd();
         }
         if (pk.mClientRequestSubChunkLimit <= 8) {
             pk.mClientRequestSubChunkLimit = 11;
@@ -102,8 +100,8 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     if (player == nullptr) return origin(userIdentifier, packet);
     if (packet.getId() == MinecraftPacketIds::ChangeDimension) {
         auto& pk = (ChangeDimensionPacket&)packet;
-        if (pk.mDimensionId == VanillaDimensions::Nether()) {
-            pk.mDimensionId = VanillaDimensions::TheEnd();
+        if (pk.mDimensionId->mValue == VanillaDimensions::Nether()) {
+            pk.mDimensionId->mValue = VanillaDimensions::TheEnd();
         }
     }
     origin(userIdentifier, packet);
@@ -128,7 +126,7 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     void*,
     ::DimensionArguments&& args
 ) {
-    if (args.mDimId == VanillaDimensions::Nether()) args.mHeightRange->mMax = 256;
+    if (args.mDimId->mValue == VanillaDimensions::Nether()) args.mHeightRange->mMax = 256;
     return origin(std::move(args));
 }
 void sendEmptyChunk(const NetworkIdentifier& netId, int chunkX, int chunkZ, bool forceUpdate) {
@@ -227,9 +225,9 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     ::Player&                  player,
     ::ChangeDimensionRequest&& changeRequest
 ) {
-    if (changeRequest.mToDimensionId == VanillaDimensions::Nether()
-        || (changeRequest.mFromDimensionId == VanillaDimensions::Nether()
-            && changeRequest.mToDimensionId == VanillaDimensions::TheEnd())) {
+    if (changeRequest.mToDimensionId->mValue == VanillaDimensions::Nether()
+        || (changeRequest.mFromDimensionId->mValue == VanillaDimensions::Nether()
+            && changeRequest.mToDimensionId->mValue == VanillaDimensions::TheEnd())) {
         auto loadingScreenIdManager = ll::memory::dAccess<LoadingScreenIdManager*>(&this->mLoadingScreenIdManager, 8);
         auto screenId               = loadingScreenIdManager->mLastLoadingScreenId + 1;
         ++loadingScreenIdManager->mLastLoadingScreenId;
@@ -303,7 +301,7 @@ LL_TYPE_INSTANCE_HOOK /*NOLINT*/ (
     int                             enchantmentSeed,
     uint64                          blockTypeRegistryChecksum
 ) {
-    if (settings.mSpawnSettings->dimension == VanillaDimensions::Nether()) {
+    if (settings.mSpawnSettings->dimension->mValue == VanillaDimensions::Nether()) {
         const_cast<ll::TypedStorage<sizeof(DimensionType), alignof(DimensionType), ::DimensionType>&>(
             settings.mSpawnSettings->dimension
         ) = VanillaDimensions::TheEnd();
