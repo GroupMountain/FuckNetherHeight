@@ -25,9 +25,8 @@ end
 target("FuckNetherHeight")
     add_rules("@levibuildscript/linkrule")
     add_rules("@levibuildscript/modpacker")
-    add_cxflags( "/EHa", "/utf-8", "/W4", "/w44265", "/w44289", "/w44296", "/w45263", "/w44738", "/w45204")
+    add_cxflags("/EHa", "/utf-8", "/W4", "/w44265", "/w44289", "/w44296", "/w45263", "/w44738", "/w45204")
     add_cxflags(
-        "/EHs",
         "-Wno-microsoft-cast",
         "-Wno-invalid-offsetof",
         "-Wno-c++2b-extensions",
@@ -48,13 +47,6 @@ target("FuckNetherHeight")
     set_symbols("debug")
     add_files("src/**.cpp")
     add_includedirs("src")
-        after_build(function (target)
-
-            local dst = "D:/testserver/26/plugins/DeathMessage"
-            os.cp(target:targetfile(), dst)
-            print("[Mod Copier]: Already copied " .. target:filename() .. " → " .. dst)
-
-        end)
     if is_server then
         add_defines("LL_PLAT_S")
     else
